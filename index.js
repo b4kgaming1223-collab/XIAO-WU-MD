@@ -1,10 +1,9 @@
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, delay } = require("@whiskeysockets/baileys");
 const P = require("pino");
 const axios = require("axios");
-const config = require("./config"); // 🔗 config.js ෆයිල් එක මෙතනට සම්බන්ධ කරා
+const config = require("./config"); 
 
 async function connectToWhatsApp() {
-    // config.js එකේ දත්ත හරියට තියෙනවද කියලා චෙක් කරනවා
     if (!config.RYUU_API_KEY || config.RYUU_API_KEY === "") {
         console.error("\n❌ ERROR: කරුණාකර config.js ෆයිල් එකේ RYUU_API_KEY එක දාන්න මචං!");
         process.exit(1);
@@ -19,7 +18,9 @@ async function connectToWhatsApp() {
     const sock = makeWASocket({
         auth: state,
         logger: P({ level: "silent" }),
-        printQRInTerminal: false
+        printQRInTerminal: false,
+        connectTimeoutMs: 60000, // ⏳ සර්වර් එක කනෙක්ට් වෙනකන් විනාඩියක් බලන් ඉන්න ඉඩ දුන්නා
+        defaultQueryTimeoutMs: 0
     });
 
     sock.ev.on("creds.update", saveCreds);
@@ -41,7 +42,6 @@ async function connectToWhatsApp() {
             console.log(`📩 Message received: ${body}`);
             await sock.sendMessage(from, { text: "🐰 *Xiao Wu හිතනවා... පොඩ්ඩක් ඉන්න...*" }, { quoted: mek });
 
-            // config.js එකෙන් API Key එක සහ Prompt එක ගන්නවා
             const ryuuUrl = `https://api.ryuu.me/api/ai/gemini?text=${encodeURIComponent(body)}&prompt=${encodeURIComponent(config.PURE_XIAO_WU_PROMPT)}&apiKey=${config.RYUU_API_KEY}`;
             const response = await axios.get(ryuuUrl);
             
@@ -62,14 +62,18 @@ async function connectToWhatsApp() {
         if (connection === "close") {
             const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
             console.log("\n⚠️ Connection closed, reconnecting...");
-            if (shouldReconnect) connectToWhatsApp();
+            if (shouldReconnect) {
+                await delay(5000); // රීකනෙක්ට් වෙන්න කලින් තත්පර 5ක් ඉන්නවා
+                connectToWhatsApp();
+            }
         }
     });
 
     // 🔑 Auto Pairing Code Generator
     if (!sock.authState.creds.registered) {
         console.log(`\n🐰 Xiao Wu සර්වර් එකට සම්බන්ධ වෙනවා... නම්බර් එක: ${config.MY_NUMBER}`);
-        await delay(6000); 
+        console.log("⏳ සර්වර් එක ස්ටේබල් වෙනකන් තත්පර 10ක් ඉන්නවා... පොඩ්ඩක් ඉන්න මචං...");
+        await delay(10000); // ⏳ ඩිලේ එක තත්පර 10ක් කලා ස්ටේබල් වෙන්න
         
         try {
             const code = await sock.requestPairingCode(config.MY_NUMBER.trim());
