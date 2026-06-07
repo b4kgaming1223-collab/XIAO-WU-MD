@@ -1,18 +1,15 @@
 {
-  "name": "xiao-wu",
-  "version": "1.5.0",
-  "description": "Pure Soul Land Xiao Wu No-API WhatsApp Bot",
+  "name": "xiao-wu-md",
+  "version": "4.5.0",
+  "description": "Premium Soul Land Xiao Wu WhatsApp Bot",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "@adiwajshing/keyed-db": "^0.2.4",
-    "@distube/ytdl-core": "^4.16.12",
-    "@ffmpeg-installer/ffmpeg": "^1.1.0",
-    "axios": "^1.6.0",
-    "fluent-ffmpeg": "^2.1.2",
     "gifted-baileys": "^2.0.6",
-    "pino": "^9.0.0"
+    "pino": "^9.0.0",
+    "axios": "^1.6.0",
+    "@distube/ytdl-core": "^4.16.12"
   }
 }
