@@ -1,7 +1,7 @@
 {
   "name": "xiao-wu-md",
   "version": "1.0.0",
-  "description": "Pure Soul Land Xiao Wu WhatsApp Bot with Config",
+  "description": "Pure Soul Land Xiao Wu WhatsApp Bot with Gifted-Baileys",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
@@ -10,7 +10,7 @@
     "node": ">=20.0.0"
   },
   "dependencies": {
-    "@whiskeysockets/baileys": "^6.7.9",
+    "gifted-baileys": "^2.0.6",
     "pino": "^9.0.0",
     "axios": "^1.7.2"
   }
