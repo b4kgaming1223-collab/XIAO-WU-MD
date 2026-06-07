@@ -4,6 +4,17 @@ const axios = require("axios");
 const config = require("./config"); 
 
 async function connectToWhatsApp() {
+    // config.js එක චෙක් කිරීම
+    if (!config.RYUU_API_KEY || config.RYUU_API_KEY === "") {
+        console.error("\n❌ ERROR: කරුණාකර config.js එකේ RYUU_API_KEY එක දාන්න මචං!");
+        process.exit(1);
+    }
+    if (config.MY_NUMBER === "947XXXXXXXX" || !config.MY_NUMBER) {
+        console.error("\n❌ ERROR: කරුණාකර config.js එකේ MY_NUMBER එකට ඔයාගේ නම්බර් එක දාන්න මචං!");
+        process.exit(1);
+    }
+
+    // සෙෂන් ෆෝල්ඩර් එක ඔටෝ හැදීම
     const { state, saveCreds } = await useMultiFileAuthState("./xiao_wu_session");
 
     const sock = makeWASocket({
@@ -15,7 +26,23 @@ async function connectToWhatsApp() {
 
     sock.ev.on("creds.update", saveCreds);
 
-    // 💬 වට්ස්ඇප් මැසේජ් ලැබෙන සහ කමාන්ඩ්ස් ක්‍රියාත්මක වන කොටස
+    // 🔑 [FIXED] වට්ස්ඇප් කෝඩ් එක (Pairing Code) ගන්නා කොටස
+    if (!sock.authState.creds.registered) {
+        console.log(`\n🐰 Xiao Wu සර්වර් එකට සම්බන්ධ වෙනවා... නම්බර් එක: ${config.MY_NUMBER}`);
+        await delay(3000); 
+        try {
+            let clearedNumber = config.MY_NUMBER.replace(/[^0-9]/g, ""); // නම්බර් එක පිරිසිදු කිරීම
+            const code = await sock.requestPairingCode(clearedNumber);
+            console.log("\n==============================================");
+            console.log(`💖 XIAO WU PAIRING CODE: ${code}`);
+            console.log("==============================================");
+            console.log("👉 මේ කෝඩ් එක ඉක්මනින්ම කොපි කරගෙන, වට්ස්ඇප් එකට ලින්ක් කරන්න!\n");
+        } catch (err) {
+            console.log("\n❌ කෝඩ් එක ගන්න බැරි වුණා. ආයෙත් 'npm start' දීලා බලන්න.", err.message);
+        }
+    }
+
+    // 💬 මැසේජ් සහ කමාන්ඩ්ස් හැන්ඩ්ලර් එක
     sock.ev.on("messages.upsert", async (chatUpdate) => {
         try {
             const mek = chatUpdate.messages[0];
@@ -27,7 +54,7 @@ async function connectToWhatsApp() {
             const body = type === "conversation" ? mek.message.conversation : 
                          type === "extendedTextMessage" ? mek.message.extendedTextMessage.text : "";
 
-            // කමාන්ඩ්ස් හඳුනාගැනීම (Prefix: . හෝ /)
+            // Prefix (. හෝ /) චෙක් කිරීම
             const isCmd = body.startsWith(".") || body.startsWith("/");
             if (!isCmd) return;
 
@@ -35,18 +62,15 @@ async function connectToWhatsApp() {
             const args = body.trim().split(/ +/).slice(1);
             const text = args.join(" ");
 
-            console.log(`🚀 Command received: ${command} | Args: ${text}`);
-
             // 1. 🌸 ALIVE COMMAND (.alive)
             if (command === "alive") {
                 const aliveMsg = `🐰 *XIAO WU WHATSAPP BOT* 🌸\n\n` +
-                                 `*Hello San-ge! Im Alive and Running Smoothly...* 💞\n\n` +
+                                 `*Hello San-ge! I'm Alive and Running...* 💞\n\n` +
                                  `🤖 *Version:* 1.0.0\n` +
                                  `⚙️ *Platform:* GitHub Codespaces\n` +
                                  `💎 *API Status:* Premium Connected\n\n` +
-                                 `*Use .menu to see what I can do for you!* ⚔️`;
+                                 `*Use .menu to see my commands!* ⚔️`;
                 
-                // ලස්සන ඇලයිව් මැසේජ් එකක් ෆොටෝ එකක් එක්ක යවනවා
                 await sock.sendMessage(from, { 
                     image: { url: "https://i.ibb.co/dJMB66cZ/20250801-234253.jpg" }, 
                     caption: aliveMsg 
@@ -75,39 +99,32 @@ async function connectToWhatsApp() {
 
             // 3. 🎶 SONG DOWNLOADER (.song)
             if (command === "song") {
-                if (!text) return reply(sock, from, "🐰 *කරුණාකර සිංදුවේ නම ඇතුළත් කරන්න මචං! (උදා: .song mal mitak)*", mek);
-                
+                if (!text) return reply(sock, from, "🐰 *කරුණාකර සිංදුවේ නම දෙන්න! (උදා: .song munasin)*", mek);
                 await reply(sock, from, "📥 *Xiao Wu සිංදුව හොයනවා... පොඩ්ඩක් ඉන්න...* 🎵", mek);
                 
                 try {
-                    // Ryuu YTAudio Downloader API
                     const searchUrl = `https://api.ryuu.me/api/download/ytaudio?text=${encodeURIComponent(text)}&apiKey=${config.RYUU_API_KEY}`;
                     const res = await axios.get(searchUrl);
                     const downloadUrl = res.data.result;
 
                     if (!downloadUrl) return reply(sock, from, "❌ *සිංදුව සොයාගත නොහැකි විය.*", mek);
 
-                    // ඕඩියෝ එක වට්ස්ඇප් එකට යවනවා
                     await sock.sendMessage(from, { 
                         audio: { url: downloadUrl }, 
                         mimetype: 'audio/mp4', 
                         ptt: false 
                     }, { quoted: mek });
-
                 } catch (e) {
-                    console.error(e);
-                    reply(sock, from, "❌ *සිංදුව ඩවුන්ලෝඩ් කිරීමේදී දෝෂයක් ඇති විය.*", mek);
+                    reply(sock, from, "❌ *සිංදුව බාගැනීමේදී දෝෂයක් ඇති විය.*", mek);
                 }
             }
 
             // 4. 📹 VIDEO DOWNLOADER (.video)
             if (command === "video") {
-                if (!text) return reply(sock, from, "🐰 *කරුණාකර වීඩියෝවේ නම ඇතුළත් කරන්න මචං!*", mek);
-                
+                if (!text) return reply(sock, from, "🐰 *කරුණාකර වීඩියෝවේ නම දෙන්න!*", mek);
                 await reply(sock, from, "📥 *Xiao Wu වීඩියෝව හොයනවා... පොඩ්ඩක් ඉන්න...* 📹", mek);
                 
                 try {
-                    // Ryuu YTVideo Downloader API
                     const searchUrl = `https://api.ryuu.me/api/download/ytvideo?text=${encodeURIComponent(text)}&apiKey=${config.RYUU_API_KEY}`;
                     const res = await axios.get(searchUrl);
                     const downloadUrl = res.data.result;
@@ -118,44 +135,37 @@ async function connectToWhatsApp() {
                         video: { url: downloadUrl }, 
                         caption: "🐰 *මෙන්න ඔයාගේ වීඩියෝව!* 🌸" 
                     }, { quoted: mek });
-
                 } catch (e) {
-                    console.error(e);
-                    reply(sock, from, "❌ *වීඩියෝව ඩවුන්ලෝඩ් කිරීමේදී දෝෂයක් ඇති විය.*", mek);
+                    reply(sock, from, "❌ *වීඩියෝව බාගැනීමේදී දෝෂයක් ඇති විය.*", mek);
                 }
             }
 
             // 5. 🎨 AI IMAGE GENERATOR (.imagine)
             if (command === "imagine") {
-                if (!text) return reply(sock, from, "🐰 *කරුණාකර සාදාගත යුතු පින්තූරයේ විස්තරයක් දෙන්න! (උදා: .imagine cute rabbit)*", mek);
-                
+                if (!text) return reply(sock, from, "🐰 *කරුණාකර සාදාගත යුතු ෆොටෝ එකේ විස්තරයක් දෙන්න!*", mek);
                 await reply(sock, from, "🎨 *Xiao Wu පින්තූරය අඳිනවා... පොඩ්ඩක් ඉන්න...* 🐇", mek);
                 
                 try {
-                    // Ryuu Text-to-Image API
                     const imgUrl = `https://api.ryuu.me/api/ai/imagine?text=${encodeURIComponent(text)}&apiKey=${config.RYUU_API_KEY}`;
-                    
                     await sock.sendMessage(from, { 
                         image: { url: imgUrl }, 
                         caption: `🐰 *Generated by Xiao Wu AI* 🌸\n\n✨ *Prompt:* ${text}` 
                     }, { quoted: mek });
-
                 } catch (e) {
-                    console.error(e);
                     reply(sock, from, "❌ *පින්තූරය සෑදීමේදී දෝෂයක් ඇති විය.*", mek);
                 }
             }
 
         } catch (error) {
-            console.error("❌ Main Process Error:", error.message);
+            console.error("❌ Error:", error.message);
         }
     });
 
-    // 🔄 කනෙක්ෂන් අප්ඩේට් එක
+    // කනෙක්ෂන් ස්ටේටස්
     sock.ev.on("connection.update", async (update) => {
         const { connection, lastDisconnect } = update;
         if (connection === "open") {
-            console.log("\n🌸 PURE XIAO WU CONECTED WITH MULTI-COMMANDS!");
+            console.log("\n🌸 PURE XIAO WU MULTI-BOT IS ONLINE!");
         }
         if (connection === "close") {
             const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
@@ -168,7 +178,6 @@ async function connectToWhatsApp() {
     });
 }
 
-// 헬පර් function එකක් රිප්ලයි ලේසි කරන්න
 async function reply(sock, from, text, mek) {
     return await sock.sendMessage(from, { text: text }, { quoted: mek });
 }
