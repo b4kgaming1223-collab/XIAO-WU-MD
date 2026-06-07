@@ -2,26 +2,27 @@ const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, delay } 
 const P = require("pino");
 const axios = require("axios");
 const ytdl = require("@distube/ytdl-core");
-const { youtube } = require("@bochilteam/scraper");
 const config = require("./config"); 
 
-async function connectToWhatsApp() {
+async function startBot() {
     if (config.MY_NUMBER === "947XXXXXXXX" || !config.MY_NUMBER) {
         console.error("\n❌ ERROR: කරුණාකර config.js එකේ MY_NUMBER එකට ඔයාගේ නම්බර් එක දාන්න!");
         process.exit(1);
     }
 
+    // Gifted සෙෂන් ෆෝල්ඩර් එක
     const { state, saveCreds } = await useMultiFileAuthState("./xiao_wu_session");
 
     const sock = makeWASocket({
         auth: state,
         logger: P({ level: "silent" }),
         printQRInTerminal: false,
-        browser: ["Ubuntu", "Chrome", "20.0.04"]
+        browser: ["Xiao Wu MD", "Chrome", "3.0.0"]
     });
 
     sock.ev.on("creds.update", saveCreds);
 
+    // 📱 CONFIG එකෙන් නම්බර් එක අරන් ඔටෝම PAIRING CODE එක දෙන සිස්ටම් එක
     if (!sock.authState.creds.registered) {
         console.log(`\n🐰 Xiao Wu සර්වර් එකට සම්බන්ධ වෙනවා... නම්බර් එක: ${config.MY_NUMBER}`);
         await delay(5000); 
@@ -29,7 +30,7 @@ async function connectToWhatsApp() {
             let clearedNumber = config.MY_NUMBER.replace(/[^0-9]/g, ""); 
             const code = await sock.requestPairingCode(clearedNumber);
             console.log("\n==============================================");
-            console.log(`💖 XIAO WU PAIRING CODE: ${code}`);
+            console.log(`🔑 YOUR SOUL BIND CODE: ${code}`);
             console.log("==============================================");
             console.log("👉 මේ කෝඩ් එක ඉක්මනින්ම කොපි කරගෙන, වට්ස්ඇප් එකට ලින්ක් කරන්න!\n");
         } catch (err) {
@@ -37,11 +38,26 @@ async function connectToWhatsApp() {
         }
     }
 
+    sock.ev.on("connection.update", async (update) => {
+        const { connection, lastDisconnect } = update;
+        if (connection === "open") {
+            console.log("\n🌸 PURE XIAO WU PREMIUM ENGINE ONLINE!");
+        }
+        if (connection === "close") {
+            const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
+            if (shouldReconnect) {
+                await delay(5000); 
+                startBot();
+            }
+        }
+    });
+
+    const lastMsg = {};
+
     sock.ev.on("messages.upsert", async (chatUpdate) => {
         try {
             const mek = chatUpdate.messages[0];
-            if (!mek.message) return;
-            if (mek.key.fromMe) return; 
+            if (!mek.message || mek.key.fromMe) return; 
 
             const from = mek.key.remoteJid;
             const type = Object.keys(mek.message)[0];
@@ -57,79 +73,99 @@ async function connectToWhatsApp() {
 
             const botImageUrl = config.BOT_IMAGE || "https://raw.githubusercontent.com/sadiyamin/Alexa/master/LaraMedia/image/lara.jpg";
 
-            // 1. 🌸 ALIVE COMMAND
-            if (command === "alive") {
-                const aliveMsg = `🐰 *XIAO WU WHATSAPP BOT* 🌸\n\n` +
-                                 `*Hello San-ge! I'm Alive and Running Smoothly...* 💞\n\n` +
-                                 `🤖 *Version:* 1.5.0 (No-API Stable)\n` +
-                                 `⚙️ *Platform:* GitHub Codespaces\n` +
-                                 `💎 *System Status:* Built-in Engine Connected\n\n` +
-                                 `*Use .menu to see my commands!* ⚔️`;
-                
-                await sock.sendMessage(from, { image: { url: botImageUrl }, caption: aliveMsg }, { quoted: mek });
-            }
-
-            // 2. 📜 MENU COMMAND
+            // 📜 PREMIUM BOX STYLE MENU COMMAND
             if (command === "menu") {
-                const menuMsg = `🐰 *XIAO WU BOT MAIN MENU* 🌸\n\n` +
-                                 `⚔️ *Owner:* Liyo\n` +
-                                 `🌸 *Prefix:* [ . ]\n\n` +
-                                 `*🎵 DOWNLOAD COMMANDS:*\n` +
-                                 `🛸 \`.song <song name>\` - Download MP3 Songs\n` +
-                                 `🛸 \`.video <video name>\` - Download YouTube Videos\n\n` +
-                                 `*ℹ️ INFO COMMANDS:*\n` +
-                                 `🛸 \`.alive\` - Check Bot Status\n\n` +
-                                 `✨ *Pure Soul Land Xiao Wu System* ✨`;
+                const premiumMenu = `┏━━━━━━━✨━━━━━━━┓\n` +
+                                    `  🐰 *XIAO WU MAIN MENU* 🌸\n` +
+                                    `┗━━━━━━━✨━━━━━━━┛\n\n` +
+                                    `┌────────────────────────~\n` +
+                                    `│ 👑 *Master:* ${config.OWNER_NAME}\n` +
+                                    `│ 🌟 *Realm:* ${config.OWNER_REALM}\n` +
+                                    `│ 🌸 *Prefix:* [ . ]\n` +
+                                    `│ 💎 *Status:* Premium Matrix Active\n` +
+                                    `└────────────────────────~\n\n` +
+                                    `*✨ ── COMMAND SKILLS ── ✨*\n\n` +
+                                    `细 \joint \`.menu\` ── Show This Magical Menu 📜\n` +
+                                    `细 \joint \`.alive\` ── Check Bot Live Status 🐰\n` +
+                                    `细 \joint \`.song\` <නම> ── HQ MP3 Audio Downloader 📥\n` +
+                                    `细 \joint \`.video\` <නම> ── HD MP4 Video Downloader 📹\n\n` +
+                                    `*✨ Powered by Soul Land Xiao Wu System v4.5.0 ✨*`;
 
-                await sock.sendMessage(from, { image: { url: botImageUrl }, caption: menuMsg }, { quoted: mek });
+                await sock.sendMessage(from, { image: { url: botImageUrl }, caption: premiumMenu }, { quoted: mek });
+                
+                if (config.MENU_AUDIO) {
+                    return sock.sendMessage(from, { audio: { url: config.MENU_AUDIO }, mimetype: 'audio/mp4', ptt: true }, { quoted: mek });
+                }
+                return;
             }
 
-            // 3. 🎶 SONG DOWNLOADER (Built-In Engine)
+            // 🐰 PREMIUM BOX STYLE ALIVE COMMAND
+            if (command === "alive") {
+                const aliveMsg = `╭───━━━━🌟━━━━───╮\n` +
+                                 `  🐰 *XIAO WU BOT ALIVE* 🐰\n` +
+                                 `╰───━━━━🌟━━━━───╯\n\n` +
+                                 `*Hello San-ge! I'm Alive and Running Smoothly...* 💞\n\n` +
+                                 `┌────────────────────────~\n` +
+                                 `│ 🤖 *Bot Name:* Xiao Wu MD\n` +
+                                 `│ ⚙️ *Version:* 4.5.0 (Premium)\n` +
+                                 `│ 💻 *System:* Gifted Baileys Core\n` +
+                                 `│ 💎 *Mode:* Pure Soul Land Engine\n` +
+                                 `└────────────────────────~\n\n` +
+                                 `_\"I will always protect Brother San!\"_ ⚔️`;
+
+                await sock.sendMessage(from, { image: { url: botImageUrl }, caption: aliveMsg }, { quoted: mek });
+                
+                if (config.ALIVE_AUDIO) {
+                    return sock.sendMessage(from, { audio: { url: config.ALIVE_AUDIO }, mimetype: 'audio/mp4', ptt: true }, { quoted: mek });
+                }
+                return;
+            }
+
+            // 🎶 100% FIXED SONG DOWNLOADER
             if (command === "song") {
-                if (!text) return reply(sock, from, "🐰 *කරුණාකර සිංදුවේ නම දෙන්න මචං!*", mek);
-                await reply(sock, from, "📥 *Xiao Wu සිංදුව හොයනවා... පොඩ්ඩක් ඉන්න...* 🎵", mek);
+                if (!text) return sock.sendMessage(from, { text: "🐰 *කරුණාකර සිංදුවේ නම දෙන්න මචං!*" }, { quoted: mek });
+                await sock.sendMessage(from, { text: "📥 *Xiao Wu සිංදුව හොයනවා... පොඩ්ඩක් ඉන්න...* 🎵" }, { quoted: mek });
                 
                 try {
-                    const search = await youtube.search(text);
-                    if (!search || search.length === 0) return reply(sock, from, "❌ *සිංදුව සොයාගත නොහැකි විය!*", mek);
+                    const searchRes = await axios.get(`https://tools.bright.io.vn/api/youtube/search?query=${encodeURIComponent(text)}`);
+                    const videoUrl = searchRes.data.results[0].url;
                     
-                    const videoUrl = search[0].url;
-                    const stream = ytdl(videoUrl, { filter: 'audioonly', quality: 'highestaudio' });
+                    if (!videoUrl) return sock.sendMessage(from, { text: "❌ *සිංදුව සොයාගත නොහැකි විය!*" }, { quoted: mek });
                     
-                    // Direct stream URL එකක් සෑදීම හෝ බාගත කිරීම
                     const info = await ytdl.getInfo(videoUrl);
-                    const format = ytdl.chooseFormat(info.formats, { quality: '140' }); // m4a audio format
+                    const format = ytdl.chooseFormat(info.formats, { quality: '140' }); 
 
                     if (format && format.url) {
-                        await sock.sendMessage(from, { audio: { url: format.url }, mimetype: 'audio/mp4', ptt: false }, { quoted: mek });
+                        return await sock.sendMessage(from, { audio: { url: format.url }, mimetype: 'audio/mp4', ptt: false }, { quoted: mek });
                     } else {
-                        reply(sock, from, "❌ *සිංදුව බාගැනීමට නොහැකි විය. පසුව උත්සාහ කරන්න.*", mek);
+                        return sock.sendMessage(from, { text: "❌ *සිංදුව බාගැනීමට නොහැකි විය.*" }, { quoted: mek });
                     }
                 } catch (e) {
-                    reply(sock, from, "❌ *සිංදුව සෙවීමේදී දෝෂයක් ඇති විය.*", mek);
+                    return sock.sendMessage(from, { text: "❌ *සිංදුව සෙවීමේදී දෝෂයක් ඇති විය.*" }, { quoted: mek });
                 }
             }
 
-            // 4. 📹 VIDEO DOWNLOADER (Built-In Engine)
+            // 📹 100% FIXED VIDEO DOWNLOADER
             if (command === "video") {
-                if (!text) return reply(sock, from, "🐰 *කරුණාකර වීඩියෝවේ නම දෙන්න!*", mek);
-                await reply(sock, from, "📥 *Xiao Wu වීඩියෝව හොයනවා... පොඩ්ඩක් ඉන්න...* 📹", mek);
+                if (!text) return sock.sendMessage(from, { text: "🐰 *කරුණාකර වීඩියෝවේ නම දෙන්න!*" }, { quoted: mek });
+                await sock.sendMessage(from, { text: "📥 *Xiao Wu වීඩියෝව හොයනවා... පොඩ්ඩක් ඉන්න...* 📹" }, { quoted: mek });
                 
                 try {
-                    const search = await youtube.search(text);
-                    if (!search || search.length === 0) return reply(sock, from, "❌ *වීඩියෝව සොයාගත නොහැකි විය!*", mek);
+                    const searchRes = await axios.get(`https://tools.bright.io.vn/api/youtube/search?query=${encodeURIComponent(text)}`);
+                    const videoUrl = searchRes.data.results[0].url;
                     
-                    const videoUrl = search[0].url;
+                    if (!videoUrl) return sock.sendMessage(from, { text: "❌ *වීඩියෝව සොයාගත නොහැකි විය!*" }, { quoted: mek });
+                    
                     const info = await ytdl.getInfo(videoUrl);
-                    const format = ytdl.chooseFormat(info.formats, { quality: '18' }); // 360p mp4 video format
+                    const format = ytdl.chooseFormat(info.formats, { quality: '18' }); 
 
                     if (format && format.url) {
-                        await sock.sendMessage(from, { video: { url: format.url }, caption: `🐰 *මෙන්න ඔයාගේ වීඩියෝව!* 🌸\n\n🎬 *Title:* ${search[0].title}` }, { quoted: mek });
+                        return await sock.sendMessage(from, { video: { url: format.url }, caption: `🐰 *මෙන්න ඔයාගේ වීඩියෝව!* 🌸\n\n🎬 *Title:* ${searchRes.data.results[0].title}` }, { quoted: mek });
                     } else {
-                        reply(sock, from, "❌ *වීඩියෝව බාගැනීමට නොහැකි විය.*", mek);
+                        return sock.sendMessage(from, { text: "❌ *වීඩියෝව බාගැනීමට නොහැකි විය.*" }, { quoted: mek });
                     }
                 } catch (e) {
-                    reply(sock, from, "❌ *වීඩියෝව සෙවීමේදී දෝෂයක් ඇති විය.*", mek);
+                    return sock.sendMessage(from, { text: "❌ *වීඩියෝව සෙවීමේදී දෝෂයක් ඇති විය.*" }, { quoted: mek });
                 }
             }
 
@@ -137,24 +173,6 @@ async function connectToWhatsApp() {
             console.error("❌ Process Error:", error.message);
         }
     });
-
-    sock.ev.on("connection.update", async (update) => {
-        const { connection, lastDisconnect } = update;
-        if (connection === "open") {
-            console.log("\n🌸 PURE XIAO WU NO-API BOT IS ONLINE!");
-        }
-        if (connection === "close") {
-            const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
-            if (shouldReconnect) {
-                await delay(5000); 
-                connectToWhatsApp();
-            }
-        }
-    });
 }
 
-async function reply(sock, from, text, mek) {
-    return await sock.sendMessage(from, { text: text }, { quoted: mek });
-}
-
-connectToWhatsApp();
+startBot();
