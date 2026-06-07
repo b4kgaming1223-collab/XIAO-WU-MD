@@ -1,7 +1,7 @@
 {
   "name": "xiao-wu-md",
-  "version": "4.5.0",
-  "description": "Premium Soul Land Xiao Wu WhatsApp Bot",
+  "version": "5.5.0",
+  "description": "Premium Soul Land Xiao Wu Fixed WhatsApp Bot",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
