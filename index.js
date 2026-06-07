@@ -1,11 +1,18 @@
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, delay } = require("gifted-baileys");
 const P = require("pino");
 const axios = require("axios");
+const fs = require("fs");
+const path = require("path");
+const ffmpeg = require("fluent-ffmpeg");
+const ffmpegInstaller = require("@ffmpeg-installer/ffmpeg");
 const config = require("./config"); 
+
+// 🛠️ Lara-MD ක්‍රමයට FFmpeg Path එක ඔටෝම සෙට් කිරීම
+ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 
 async function startBot() {
     if (config.MY_NUMBER === "947XXXXXXXX" || !config.MY_NUMBER) {
-        console.error("\n❌ ERROR: කරුණාකර config.js එකේ MY_NUMBER එකට ඔයාගේ නම්බර් එක දාන්න මචං!");
+        console.error("\n❌ ERROR: කරුණාකර config.js එකේ MY_NUMBER එක වෙනස් කරන්න මචං!");
         process.exit(1);
     }
 
@@ -62,25 +69,49 @@ async function startBot() {
             const senderName = mek.pushName || "Warrior";
             const botImageUrl = config.BOT_IMAGE || "https://raw.githubusercontent.com/sadiyamin/Alexa/master/LaraMedia/image/lara.jpg";
 
-            // 🛠️ TRUE BUFFER SENDER (ලෙඩ ඔක්කොම සදහටම ඉවරයි)
-            const sendStablePTT = async (targetJid, audioUrl, quotedMessage) => {
+            // 🎧 LARA-MD STYLE AUDIO TO PTT CONVERTER
+            const sendLaraStylePTT = async (targetJid, audioUrl, quotedMessage) => {
+                const inputPath = path.join(__dirname, 'temp_input.mp3');
+                const outputPath = path.join(__dirname, 'temp_output.opus');
+
                 try {
-                    // ලින්ක් එක කෙලින්ම යවන්නේ නැතුව සර්වර් එක ඇතුළට බයිනරි බෆර් එකක් කරලා ගන්නවා මචං
-                    const response = await axios({
-                        method: 'get',
-                        url: audioUrl,
-                        responseType: 'arraybuffer'
+                    // 1. GitHub ලින්ක් එකෙන් ෆයිල් එක මුලින්ම බාගන්නවා
+                    const response = await axios({ method: 'get', url: audioUrl, responseType: 'stream' });
+                    const writer = fs.createWriteStream(inputPath);
+                    response.data.pipe(writer);
+
+                    await new Promise((resolve, reject) => {
+                        writer.on('finish', resolve);
+                        writer.on('error', reject);
                     });
-                    
-                    const audioBuffer = Buffer.from(response.data, 'binary');
-                    
-                    await sock.sendMessage(targetJid, { 
-                        audio: audioBuffer, 
-                        mimetype: 'audio/mp4', // WhatsApp PTT standard codec
-                        ptt: true 
-                    }, { quoted: quotedMessage });
+
+                    // 2. Lara-MD එකේ වගේම fluent-ffmpeg එකෙන් True WhatsApp Voice Note එකක් බවට හරවනවා
+                    ffmpeg(inputPath)
+                        .audioCodec('libopus')
+                        .toFormat('opus')
+                        .outputOptions('-vn')
+                        .on('end', async () => {
+                            const opusBuffer = fs.readFileSync(outputPath);
+                            
+                            // 3. WhatsApp එකට නිවැරදි වොයිස් නෝට් එකක් විදිහට සෙන්ඩ් කරනවා
+                            await sock.sendMessage(targetJid, { 
+                                audio: opusBuffer, 
+                                mimetype: 'audio/mp4', 
+                                ptt: true 
+                            }, { quoted: quotedMessage });
+
+                            // Temp ෆයිල් ටික අයින් කරනවා
+                            if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+                            if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+                        })
+                        .on('error', (err) => {
+                            console.log("❌ Ffmpeg Convert Error:", err.message);
+                            if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+                        })
+                        .save(outputPath);
+
                 } catch (err) {
-                    console.log("❌ Audio Buffer Download Error:", err.message);
+                    console.log("❌ Audio System Error:", err.message);
                 }
             };
 
@@ -98,17 +129,17 @@ async function startBot() {
                                     `│ 🌸 *Prefix:* [ . ]\n` +
                                     `│ 💎 *Status:* Active\n` +
                                     `└────────────────────────~\n\n` +
-                                    `*✨ ── COMMAND LIST ── ✨*\n\n` +
+                                    `*✨ ── කමාන්ඩ් ලිස්ට් එක ── ✨*\n\n` +
                                     `🛸 \`.menu\` ── ප්‍රධාන මෙනුව බැලීමට 📜\n` +
                                     `🛸 \`.alive\` ── බොට් ක්‍රියාකාරීත්වය සෙවීමට 🐰\n` +
                                     `🛸 \`.song\` <නම> ── Youtube MP3 බාගැනීමට 📥\n` +
                                     `🛸 \`.video\` <නම> ── Youtube MP4 බාගැනීමට 📹\n\n` +
-                                    `*🌸 Xiao Wu MD v6.5.0 - True Buffer Edition ✨*`;
+                                    `*🌸 Xiao Wu MD v6.8.0 - Lara Engine Installer Active ✨*`;
 
                 const sentMsg = await sock.sendMessage(from, { image: { url: botImageUrl }, caption: premiumMenu }, { quoted: mek });
                 if (config.MENU_AUDIO) {
-                    await delay(1000); // පොඩි ඩිලේ එකක් දුන්නා පිළිවෙලට යන්න
-                    await sendStablePTT(from, config.MENU_AUDIO, sentMsg);
+                    await delay(1000);
+                    await sendLaraStylePTT(from, config.MENU_AUDIO, sentMsg);
                 }
                 return;
             }
@@ -123,8 +154,8 @@ async function startBot() {
                                  `*Hello ${senderName}! මම සාර්ථකව ඔන්ලයින් ඉන්නේ...* 🌸\n\n` +
                                  `┌────────────────────────~\n` +
                                  `│ 🤖 *Bot Name:* Xiao Wu MD\n` +
-                                 `│ ⚙️ *Version:* 6.5.0 (Premium Core)\n` +
-                                 `│ 💻 *Engine:* Fixed Gifted Core\n` +
+                                 `│ ⚙️ *Version:* 6.8.0 (Premium Core)\n` +
+                                 `│ 💻 *Engine:* Lara Core Fixed\n` +
                                  `│ 💎 *Mode:* Pure Soul Ring Active\n` +
                                  `└────────────────────────~\n\n` +
                                  `_\"Ready to assist you anytime!\"_ ⚔️`;
@@ -132,7 +163,7 @@ async function startBot() {
                 const sentMsg = await sock.sendMessage(from, { image: { url: botImageUrl }, caption: aliveMsg }, { quoted: mek });
                 if (config.ALIVE_AUDIO) {
                     await delay(1000);
-                    await sendStablePTT(from, config.ALIVE_AUDIO, sentMsg);
+                    await sendLaraStylePTT(from, config.ALIVE_AUDIO, sentMsg);
                 }
                 return;
             }
