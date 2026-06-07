@@ -10,7 +10,7 @@ async function startBot() {
         process.exit(1);
     }
 
-    // ස්ටේබල් Xiao Wu සෙෂන් ස්ටෝරේජ් එක
+    // ස්ටේබල් Xiao Wu සෙෂන් ෆෝල්ඩර් එක
     const { state, saveCreds } = await useMultiFileAuthState("./xiao_wu_session");
 
     const sock = makeWASocket({
@@ -22,7 +22,7 @@ async function startBot() {
 
     sock.ev.on("creds.update", saveCreds);
 
-    // 📱 Config එකෙන් නම්බර් එක අරන් ඔටෝම Pairing Code එක දෙන සිස්ටම් එක
+    // 📱 ඔටෝ පෙයාරින් කෝඩ් සිස්ටම් එක
     if (!sock.authState.creds.registered) {
         console.log(`\n🐰 Xiao Wu සර්වර් එකට සම්බන්ධ වෙනවා... නම්බර් එක: ${config.MY_NUMBER}`);
         await delay(6000); 
@@ -48,8 +48,6 @@ async function startBot() {
             if (shouldReconnect) {
                 await delay(5000); 
                 startBot();
-            } else {
-                console.log("⚠️ සෙෂන් එක ඉවරයි! xiao_wu_session ෆෝල්ඩර් එක මකලා රීස්ටාර්ට් කරන්න.");
             }
         }
     });
@@ -57,7 +55,7 @@ async function startBot() {
     sock.ev.on("messages.upsert", async (chatUpdate) => {
         try {
             const mek = chatUpdate.messages[0];
-            if (!mek.message || mek.key.fromMe) return; 
+            if (!mek.message) return; // 🛠️ FIX: ඔයාගේ නම්බර් එකෙන් එවන ඒවා වැඩ කරන්න 'fromMe' චෙක් එක අයින් කළා මචං!
 
             const from = mek.key.remoteJid;
             const type = Object.keys(mek.message)[0];
@@ -74,7 +72,9 @@ async function startBot() {
             const senderName = mek.pushName || "Soul Land Warrior";
             const botImageUrl = config.BOT_IMAGE || "https://raw.githubusercontent.com/sadiyamin/Alexa/master/LaraMedia/image/lara.jpg";
 
-            // 📜 SOUL LAND THEME BOX STYLE MENU
+            // ========================================================
+            // 🐰 SOUL LAND THEME MENU COMMAND
+            // ========================================================
             if (command === "menu") {
                 const premiumMenu = `┏━━━━━━━✨━━━━━━━┓\n` +
                                     `  🐰 *XIAO WU MAIN MENU* 🌸\n` +
@@ -88,21 +88,28 @@ async function startBot() {
                                     `*✨ ── SOUL SKILLS LIST ── ✨*\n\n` +
                                     `🛸 \`.menu\` ── මෙනු ලිස්ට් එක බැලීමට 📜\n` +
                                     `🛸 \`.alive\` ── බොට් ඔන්ලයින්ද බැලීමට 🐰\n` +
-                                    `🛸 \`.song\` <නම> ── උසස් තත්වයේ MP3 බාගැනීමට 📥\n` +
-                                    `🛸 \`.video\` <නම> ── සුපැහැදිලි MP4 බාගැනීමට 📹\n\n` +
-                                    `*✨ "Even if I sacrifice my soul, I will protect you!" - Xiao Wu v5.6.0 ✨*`;
+                                    `🛸 \`.song\` <නම> ── MP3 බාගැනීමට 📥\n` +
+                                    `🛸 \`.video\` <නම> ── MP4 බාගැනීමට 📹\n\n` +
+                                    `*✨ "Even if I sacrifice my soul, I will protect you!" - Xiao Wu v5.7.0 ✨*`;
 
-                await sock.sendMessage(from, { image: { url: botImageUrl }, caption: premiumMenu }, { quoted: mek });
+                // 1. ඉස්සෙල්ලාම පින්තූරය කැප්ෂන් එකත් එක්ක යවනවා
+                const sentMsg = await sock.sendMessage(from, { image: { url: botImageUrl }, caption: premiumMenu }, { quoted: mek });
                 
+                // 2. තත්පර බාගයකින් ඔටෝම වොයිස් නෝට් එක සෙන්ඩ් වෙනවා
                 if (config.MENU_AUDIO) {
-                    try {
-                        await sock.sendMessage(from, { audio: { url: config.MENU_AUDIO }, mimetype: 'audio/mp4', ptt: true }, { quoted: mek });
-                    } catch (e) { console.log("Audio Send Error"); }
+                    await delay(500);
+                    return sock.sendMessage(from, { 
+                        audio: { url: config.MENU_AUDIO }, 
+                        mimetype: 'audio/mp4', 
+                        ptt: true 
+                    }, { quoted: sentMsg });
                 }
                 return;
             }
 
-            // 🐰 SOUL LAND THEME ALIVE
+            // ========================================================
+            // 🐰 SOUL LAND THEME ALIVE COMMAND
+            // ========================================================
             if (command === "alive") {
                 const aliveMsg = `╭───━━━━🌟━━━━───╮\n` +
                                  `  🐰 *XIAO WU STATUS* 🐰\n` +
@@ -110,38 +117,41 @@ async function startBot() {
                                  `*Hii ${senderName}! මම සාර්ථකව ඔන්ලයින් ඉන්නේ...* 💞\n\n` +
                                  `┌────────────────────────~\n` +
                                  `│ 🤖 *Bot Name:* Xiao Wu MD\n` +
-                                 `│ ⚙️ *Version:* 5.6.0 (Premium Core)\n` +
+                                 `│ ⚙️ *Version:* 5.7.0 (Premium Core)\n` +
                                  `│ 💻 *Engine:* Fixed Lara-Baileys Core\n` +
                                  `│ 💎 *Mode:* Pure Soul Ring Active\n` +
                                  `└────────────────────────~\n\n` +
                                  `_\"San-ge, Xiao Wu is always here with you to protect!\"_ ⚔️`;
 
-                await sock.sendMessage(from, { image: { url: botImageUrl }, caption: aliveMsg }, { quoted: mek });
+                // 1. අලයිව් පින්තූරය සහ කැප්ෂන් එක යැවීම
+                const sentMsg = await sock.sendMessage(from, { image: { url: botImageUrl }, caption: aliveMsg }, { quoted: mek });
                 
+                // 2. තත්පර බාගයකින් ඔටෝම වොයිස් නෝට් එක සෙන්ඩ් වෙනවා
                 if (config.ALIVE_AUDIO) {
-                    try {
-                        await sock.sendMessage(from, { audio: { url: config.ALIVE_AUDIO }, mimetype: 'audio/mp4', ptt: true }, { quoted: mek });
-                    } catch (e) { console.log("Audio Send Error"); }
+                    await delay(500);
+                    return sock.sendMessage(from, { 
+                        audio: { url: config.ALIVE_AUDIO }, 
+                        mimetype: 'audio/mp4', 
+                        ptt: true 
+                    }, { quoted: sentMsg });
                 }
                 return;
             }
 
             // 🎶 FIXED SONG DOWNLOADER
             if (command === "song") {
-                if (!text) return sock.sendMessage(from, { text: "🐰 *කරුණාකරසිංදුවේ නම දෙන්න මචං!*" }, { quoted: mek });
+                if (!text) return sock.sendMessage(from, { text: "🐰 *කරුණාකර සිංදුවේ නම දෙන්න මචං!*" }, { quoted: mek });
                 await sock.sendMessage(from, { text: "📥 *Xiao Wu සිංදුව හොයනවා... පොඩ්ඩක් ඉන්න...* 🎵" }, { quoted: mek });
-                
                 try {
                     const searchRes = await axios.get(`https://tools.bright.io.vn/api/youtube/search?query=${encodeURIComponent(text)}`);
                     const videoUrl = searchRes.data.results[0].url;
                     const info = await ytdl.getInfo(videoUrl);
                     const format = ytdl.chooseFormat(info.formats, { quality: '140' }); 
-
                     if (format && format.url) {
                         return await sock.sendMessage(from, { audio: { url: format.url }, mimetype: 'audio/mp4', ptt: false }, { quoted: mek });
                     }
                 } catch (e) {
-                    return sock.sendMessage(from, { text: "❌ *සිංදුව සෙවීමේදී හෝ බාගැනීමේදී දෝෂයක් ඇති විය.*" }, { quoted: mek });
+                    return sock.sendMessage(from, { text: "❌ *Error ekak mathuuna machan.*" }, { quoted: mek });
                 }
             }
 
@@ -149,18 +159,16 @@ async function startBot() {
             if (command === "video") {
                 if (!text) return sock.sendMessage(from, { text: "🐰 *කරුණාකර වීඩියෝවේ නම දෙන්න!*" }, { quoted: mek });
                 await sock.sendMessage(from, { text: "📥 *Xiao Wu වීඩියෝව හොයනවා... පොඩ්ඩක් ඉන්න...* 📹" }, { quoted: mek });
-                
                 try {
                     const searchRes = await axios.get(`https://tools.bright.io.vn/api/youtube/search?query=${encodeURIComponent(text)}`);
                     const videoUrl = searchRes.data.results[0].url;
                     const info = await ytdl.getInfo(videoUrl);
                     const format = ytdl.chooseFormat(info.formats, { quality: '18' }); 
-
                     if (format && format.url) {
-                        return await sock.sendMessage(from, { video: { url: format.url }, caption: `🐰 *මෙන්න ඔයාගේ වීඩියෝව!* 🌸\n\n🎬 *Title:* ${searchRes.data.results[0].title}` }, { quoted: mek });
+                        return await sock.sendMessage(from, { video: { url: format.url }, caption: `🐰 *මෙන්න වීඩියෝව!* 🌸` }, { quoted: mek });
                     }
                 } catch (e) {
-                    return sock.sendMessage(from, { text: "❌ *වීඩියෝව සෙවීමේදී හෝ බාගැනීමේදී දෝෂයක් ඇති විය.*" }, { quoted: mek });
+                    return sock.sendMessage(from, { text: "❌ *Error ekak mathuuna machan.*" }, { quoted: mek });
                 }
             }
 
