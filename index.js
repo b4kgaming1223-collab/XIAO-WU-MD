@@ -55,7 +55,7 @@ async function startBot() {
 
             const from = mek.key.remoteJid;
             
-            // 🛠️ Loop crash fix (තමන්ගේම මැසේජ් වලට රිප්ලයි වීම වැළැක්වීම)
+            // Loop crash fix
             const botNumber = config.MY_NUMBER.replace(/[^0-9]/g, "") + "@s.whatsapp.net";
             if (mek.key.fromMe && from === botNumber) return; 
 
@@ -70,118 +70,123 @@ async function startBot() {
             const args = body.trim().split(/ +/).slice(1);
             const text = args.join(" ");
 
-            const senderName = mek.pushName || "Soul Land Warrior";
+            const senderName = mek.pushName || "Warrior";
             const botImageUrl = config.BOT_IMAGE || "https://raw.githubusercontent.com/sadiyamin/Alexa/master/LaraMedia/image/lara.jpg";
 
+            // 🛠️ HELPER FUNCTION: ඕඩියෝ එක බෆර් එකක් විදිහට අරන් ප්ලේ කරවන සිස්ටම් එක
+            const sendStableAudio = async (targetJid, audioUrl, quotedMessage) => {
+                try {
+                    const response = await axios({
+                        method: 'get',
+                        url: audioUrl,
+                        responseType: 'arraybuffer'
+                    });
+                    const audioBuffer = Buffer.from(response.data, 'binary');
+                    
+                    await sock.sendMessage(targetJid, { 
+                        audio: audioBuffer, 
+                        mimetype: 'audio/mp4', 
+                        ptt: true 
+                    }, { quoted: quotedMessage });
+                } catch (err) {
+                    console.log("❌ Audio Play Error:", err.message);
+                }
+            };
+
             // ========================================================
-            // 🐰 MENU COMMAND (XIAO WU TALKING STYLE)
+            // 🐰 MENU COMMAND
             // ========================================================
             if (command === "menu") {
                 const premiumMenu = `┏━━━━━━━✨━━━━━━━┓\n` +
                                     `  🐰 *XIAO WU MAIN MENU* 🌸\n` +
                                     `┗━━━━━━━✨━━━━━━━┛\n\n` +
-                                    `*ආයුබෝවන් ${senderName} ක්ලෑන් එකේ වීරයා!* ⚔️\n\n` +
+                                    `*ආයුබෝවන් ${senderName}!* ⚔️\n\n` +
                                     `┌────────────────────────~\n` +
                                     `│ 👑 *Master:* ${config.OWNER_NAME}\n` +
                                     `│ 🌟 *Realm:* ${config.OWNER_REALM}\n` +
                                     `│ 🌸 *Prefix:* [ . ]\n` +
-                                    `│ 💎 *Status:* Pure Soft Matrix Active\n` +
+                                    `│ 💎 *Status:* Active\n` +
                                     `└────────────────────────~\n\n` +
-                                    `*✨ ── Xiao Wu ගේ බලසම්පන්න හැකියාවන් ── ✨*\n\n` +
-                                    `🛸 \`.menu\` ── මගේ මෙනු ලිස්ට් එක බලන්න 📜\n` +
-                                    `🛸 \`.alive\` ── මම ඔන්ලයින්ද කියලා චෙක් කරන්න 🐰\n` +
-                                    `🛸 \`.song\` <නම> ── ලස්සන සින්දු MP3 බාගන්න 📥\n` +
-                                    `🛸 \`.video\` <නම> ── සුපැහැදිලි වීඩියෝ MP4 බාගන්න 📹\n\n` +
-                                    `*🌸 "${config.OWNER_NAME}", ඔයාව රකින්න මගේ මුළු ආත්මය වුණත් මම පූජා කරනවා! - Xiao Wu v5.8.0 ✨*`;
+                                    `*✨ ── කමාන්ඩ් ලිස්ට් එක ── ✨*\n\n` +
+                                    `🛸 \`.menu\` ── ප්‍රධාන මෙනුව බැලීමට 📜\n` +
+                                    `🛸 \`.alive\` ── බොට් ක්‍රියාකාරීත්වය සෙවීමට 🐰\n` +
+                                    `🛸 \`.song\` <නම> ── Youtube MP3 බාගැනීමට 📥\n` +
+                                    `🛸 \`.video\` <නම> ── Youtube MP4 බාගැනීමට 📹\n\n` +
+                                    `*🌸 Xiao Wu MD v5.9.5 - Playback Fixed ✨*`;
 
-                // පින්තූරය යැවීම
                 const sentMsg = await sock.sendMessage(from, { image: { url: botImageUrl }, caption: premiumMenu }, { quoted: mek });
                 
-                // ඔටෝ ඕඩියෝ වොයිස් නෝට් එක
                 if (config.MENU_AUDIO) {
                     await delay(800);
-                    try {
-                        await sock.sendMessage(from, { 
-                            audio: { url: config.MENU_AUDIO }, 
-                            mimetype: 'audio/mp4', 
-                            ptt: true 
-                        }, { quoted: sentMsg });
-                    } catch (e) { console.log("Audio Error"); }
+                    await sendStableAudio(from, config.MENU_AUDIO, sentMsg);
                 }
                 return;
             }
 
             // ========================================================
-            // 🐰 ALIVE COMMAND (XIAO WU TALKING STYLE)
+            // 🐰 ALIVE COMMAND
             // ========================================================
             if (command === "alive") {
                 const aliveMsg = `╭───━━━━🌟━━━━───╮\n` +
                                  `  🐰 *XIAO WU STATUS* 🐰\n` +
                                  `╰───━━━━🌟━━━━───╯\n\n` +
-                                 `*Hii ${senderName}! මම ඔයා වෙනුවෙන් සාර්ථකව ඔන්ලයින් ඉන්නේ...* 💞\n\n` +
-                                 `_ඔයා දන්නවද, සන්-ගී (San-ge) වගේම මම හැමවෙලේම ඔයාව ආරක්ෂා කරන්න සූදානම්!_ ⚔️\n\n` +
+                                 `*Hello ${senderName}! මම සාර්ථකව ඔන්ලයින් ඉන්නේ...* 🌸\n\n` +
                                  `┌────────────────────────~\n` +
                                  `│ 🤖 *Bot Name:* Xiao Wu MD\n` +
-                                 `│ ⚙️ *Version:* 5.8.0 (Premium Core)\n` +
+                                 `│ ⚙️ *Version:* 5.9.5 (Premium Core)\n` +
                                  `│ 💻 *Engine:* Fixed Gifted Core\n` +
                                  `│ 💎 *Mode:* Pure Soul Ring Active\n` +
                                  `└────────────────────────~\n\n` +
-                                 `_\"මම කොහේ හිටියත් මගේ හදවත ඔයා ළඟයි...\"_ 🌸`;
+                                 `_\"Ready to assist you anytime!\"_ ⚔️`;
 
                 const sentMsg = await sock.sendMessage(from, { image: { url: botImageUrl }, caption: aliveMsg }, { quoted: mek });
                 
                 if (config.ALIVE_AUDIO) {
                     await delay(800);
-                    try {
-                        await sock.sendMessage(from, { 
-                            audio: { url: config.ALIVE_AUDIO }, 
-                            mimetype: 'audio/mp4', 
-                            ptt: true 
-                        }, { quoted: sentMsg });
-                    } catch (e) { console.log("Audio Error"); }
+                    await sendStableAudio(from, config.ALIVE_AUDIO, sentMsg);
                 }
                 return;
             }
 
             // ========================================================
-            // 🎶 FIXED SONG DOWNLOADER (NEW GIFTED TECH API)
+            // 🎶 SONG DOWNLOADER
             // ========================================================
             if (command === "song") {
-                if (!text) return sock.sendMessage(from, { text: "🐰 *Xiao Wu ට සිංදුවේ නම කියන්නකෝ අනේ!*" }, { quoted: mek });
-                await sock.sendMessage(from, { text: "📥 *Xiao Wu ඔයා වෙනුවෙන් සිංදුව හොයනවා... පොඩ්ඩක් ඉන්න සුදූ...* 🎵" }, { quoted: mek });
+                if (!text) return sock.sendMessage(from, { text: "🐰 *කරුණාකර සිංදුවේ නම හෝ ලින්ක් එක ලබාදෙන්න.*" }, { quoted: mek });
+                await sock.sendMessage(from, { text: "📥 *Xiao Wu සිංදුව සොයමින් පවතී... පොඩ්ඩක් ඉන්න...* 🎵" }, { quoted: mek });
                 try {
-                    // ඔයා එවපු Gifted API එක ලස්සනට සෙට් කළා මචං
                     const res = await axios.get(`https://api.giftedtech.my.id/api/download/ytmp3?url=${encodeURIComponent(text)}`);
                     const downloadUrl = res.data.result.download_url;
                     
                     if (downloadUrl) {
-                        return await sock.sendMessage(from, { audio: { url: downloadUrl }, mimetype: 'audio/mp4', ptt: false }, { quoted: mek });
+                        const audioRes = await axios({ method: 'get', url: downloadUrl, responseType: 'arraybuffer' });
+                        return await sock.sendMessage(from, { audio: Buffer.from(audioRes.data, 'binary'), mimetype: 'audio/mp4', ptt: false }, { quoted: mek });
                     } else {
-                        return sock.sendMessage(from, { text: "❌ *අනේ මට ඒ සිංදුව හොයාගන්න බැරි වුණානේ...*" }, { quoted: mek });
+                        return sock.sendMessage(from, { text: "❌ *සිංදුව සොයාගත නොහැකි විය.*" }, { quoted: mek });
                     }
                 } catch (e) {
-                    return sock.sendMessage(from, { text: "❌ *සිංදුව සෙවීමේදී දෝෂයක් ඇති වුණා මචං.*" }, { quoted: mek });
+                    return sock.sendMessage(from, { text: "❌ *සෙවීමේදී දෝෂයක් ඇති වුණා මචං.*" }, { quoted: mek });
                 }
             }
 
             // ========================================================
-            // 📹 FIXED VIDEO DOWNLOADER (NEW GIFTED TECH API)
+            // 📹 VIDEO DOWNLOADER
             // ========================================================
             if (command === "video") {
-                if (!text) return sock.sendMessage(from, { text: "🐰 *Xiao Wu ට වීඩියෝ එකේ නම කියන්නකෝ!*" }, { quoted: mek });
-                await sock.sendMessage(from, { text: "📥 *Xiao Wu ඔයා වෙනුවෙන් වීඩියෝව හොයනවා... පොඩ්ඩක් ඉන්න...* 📹" }, { quoted: mek });
+                if (!text) return sock.sendMessage(from, { text: "🐰 *කරුණාකර වීඩියෝවේ නම හෝ ලින්ක් එක ලබාදෙන්න.*" }, { quoted: mek });
+                await sock.sendMessage(from, { text: "📥 *Xiao Wu වීඩියෝව සොයමින් පවතී... පොඩ්ඩක් ඉන්න...* 📹" }, { quoted: mek });
                 try {
                     const res = await axios.get(`https://api.giftedtech.my.id/api/download/ytmp4?url=${encodeURIComponent(text)}`);
                     const downloadUrl = res.data.result.download_url;
                     const title = res.data.result.title || "Xiao Wu Video";
                     
                     if (downloadUrl) {
-                        return await sock.sendMessage(from, { video: { url: downloadUrl }, caption: `🐰 *මෙන්න ඔයා ඉල්ලපු වීඩියෝව මම ගෙනාවා!* 🌸\n\n🎬 *Title:* ${title}` }, { quoted: mek });
+                        return await sock.sendMessage(from, { video: { url: downloadUrl }, caption: `🐰 *මෙන්න ඔයා ඉල්ලපු වීඩියෝව!* 🌸\n\n🎬 *Title:* ${title}` }, { quoted: mek });
                     } else {
-                        return sock.sendMessage(from, { text: "❌ *අනේ මට ඒ වීඩියෝව හොයාගන්න බැරි වුණා...*" }, { quoted: mek });
+                        return sock.sendMessage(from, { text: "❌ *වීඩියෝව සොයාගත නොහැකි විය.*" }, { quoted: mek });
                     }
                 } catch (e) {
-                    return sock.sendMessage(from, { text: "❌ *වීඩියෝව සෙවීමේදී දෝෂයක් ඇති වුණා මචං.*" }, { "../../": "" }, { quoted: mek });
+                    return sock.sendMessage(from, { text: "❌ *වීඩියෝව සෙවීමේදී දෝෂයක් ඇති වුණා මචං.*" }, { quoted: mek });
                 }
             }
 
