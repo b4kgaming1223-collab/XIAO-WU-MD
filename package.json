@@ -16,8 +16,6 @@
     "axios": "^1.6.0",
     "fluent-ffmpeg": "^2.1.2",
     "gifted-baileys": "^2.0.6",
-    "pino": "^9.0.0",
-    "ytsearch-venom": "^1.0.0",
-    "mfiredlcore-yt": "^1.0.0"
+    "pino": "^9.0.0"
   }
 }
