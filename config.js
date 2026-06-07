@@ -10,7 +10,7 @@ module.exports = {
     BOT_IMAGE: "https://raw.githubusercontent.com/b4kgaming1223-collab/XIAO-WU-MD-help/refs/heads/main/1780583805266.png",
 
     // 🎵 Menu එක ගැහුවාම ඔටෝම බැක්ග්‍රවුන්ඩ් එකෙන් යන Voice Note (Direct MP3 Link)
-    MENU_AUDIO: "https://github.com/Sadeesha-lara/Lara-MD-Bot/raw/main/media/menu.mp3",
+    MENU_AUDIO: "https://github.com/b4kgaming1223-collab/XiaoWu-Media/raw/refs/heads/main/lv_0_20260607175249.mp3",
 
     // 🎵 Alive එක ගැහුවාම ඔටෝම බැක්ග්‍රවුන්ඩ් එකෙන් යන Voice Note (Direct MP3 Link)
     ALIVE_AUDIO: "https://github.com/b4kgaming1223-collab/XiaoWu-Media/raw/refs/heads/main/lv_0_20260607174637.mp3"
