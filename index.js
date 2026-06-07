@@ -4,28 +4,18 @@ const axios = require("axios");
 const config = require("./config"); 
 
 async function connectToWhatsApp() {
-    if (!config.RYUU_API_KEY || config.RYUU_API_KEY === "") {
-        console.error("\n❌ ERROR: කරුණාකර config.js ෆයිල් එකේ RYUU_API_KEY එක දාන්න මචං!");
-        process.exit(1);
-    }
-    if (config.MY_NUMBER === "947XXXXXXXX" || !config.MY_NUMBER) {
-        console.error("\n❌ ERROR: කරුණාකර config.js ෆයිල් එකේ MY_NUMBER එකට ඔයාගේ ඇත්තම නම්බර් එක දාන්න මචං!");
-        process.exit(1);
-    }
-
-    // 🔒 ඔටෝම සෙෂන් එක පිරිසිදුව හදාගන්නවා
     const { state, saveCreds } = await useMultiFileAuthState("./xiao_wu_session");
 
     const sock = makeWASocket({
         auth: state,
         logger: P({ level: "silent" }),
         printQRInTerminal: false,
-        browser: ["Ubuntu", "Chrome", "20.0.04"] // 🌐 සර්වර් එකට අපි Chrome browser එකක් වගේ පේන්න සැලැස්සුවා
+        browser: ["Ubuntu", "Chrome", "20.0.04"]
     });
 
     sock.ev.on("creds.update", saveCreds);
 
-    // 💬 වට්ස්ඇප් මැසේජ් ලැබෙන කොටස
+    // 💬 වට්ස්ඇප් මැසේජ් ලැබෙන සහ කමාන්ඩ්ස් ක්‍රියාත්මක වන කොටස
     sock.ev.on("messages.upsert", async (chatUpdate) => {
         try {
             const mek = chatUpdate.messages[0];
@@ -37,19 +27,127 @@ async function connectToWhatsApp() {
             const body = type === "conversation" ? mek.message.conversation : 
                          type === "extendedTextMessage" ? mek.message.extendedTextMessage.text : "";
 
-            if (!body) return;
+            // කමාන්ඩ්ස් හඳුනාගැනීම (Prefix: . හෝ /)
+            const isCmd = body.startsWith(".") || body.startsWith("/");
+            if (!isCmd) return;
 
-            console.log(`📩 Message received: ${body}`);
-            await sock.sendMessage(from, { text: "🐰 *Xiao Wu හිතනවා... පොඩ්ඩක් ඉන්න...*" }, { quoted: mek });
+            const command = body.slice(1).trim().split(/ +/).shift().toLowerCase();
+            const args = body.trim().split(/ +/).slice(1);
+            const text = args.join(" ");
 
-            const ryuuUrl = `https://api.ryuu.me/api/ai/gemini?text=${encodeURIComponent(body)}&prompt=${encodeURIComponent(config.PURE_XIAO_WU_PROMPT)}&apiKey=${config.RYUU_API_KEY}`;
-            const response = await axios.get(ryuuUrl);
-            
-            const xiaoWuReply = response.data.result || "අනේ මට ඒක තේරුණේ නෑ යාළුවා... 🫣";
-            await sock.sendMessage(from, { text: `🐰 *XIAO WU* 🌸\n\n${xiaoWuReply}` }, { quoted: mek });
+            console.log(`🚀 Command received: ${command} | Args: ${text}`);
+
+            // 1. 🌸 ALIVE COMMAND (.alive)
+            if (command === "alive") {
+                const aliveMsg = `🐰 *XIAO WU WHATSAPP BOT* 🌸\n\n` +
+                                 `*Hello San-ge! Im Alive and Running Smoothly...* 💞\n\n` +
+                                 `🤖 *Version:* 1.0.0\n` +
+                                 `⚙️ *Platform:* GitHub Codespaces\n` +
+                                 `💎 *API Status:* Premium Connected\n\n` +
+                                 `*Use .menu to see what I can do for you!* ⚔️`;
+                
+                // ලස්සන ඇලයිව් මැසේජ් එකක් ෆොටෝ එකක් එක්ක යවනවා
+                await sock.sendMessage(from, { 
+                    image: { url: "https://i.ibb.co/dJMB66cZ/20250801-234253.jpg" }, 
+                    caption: aliveMsg 
+                }, { quoted: mek });
+            }
+
+            // 2. 📜 MENU COMMAND (.menu)
+            if (command === "menu") {
+                const menuMsg = `🐰 *XIAO WU BOT MAIN MENU* 🌸\n\n` +
+                                 `⚔️ *Owner:* Liyo\n` +
+                                 `🌸 *Prefix:* [ . ]\n\n` +
+                                 `*🎵 DOWNLOAD COMMANDS:*\n` +
+                                 `🛸 \`.song <song name>\` - Download MP3 Songs\n` +
+                                 `🛸 \`.video <video name>\` - Download YouTube Videos\n\n` +
+                                 `*🎨 AI & IMAGE COMMANDS:*\n` +
+                                 `🛸 \`.imagine <prompt>\` - AI Image Generator\n\n` +
+                                 `*ℹ️ INFO COMMANDS:*\n` +
+                                 `🛸 \`.alive\` - Check Bot Status\n\n` +
+                                 `✨ *Pure Soul Land Xiao Wu System* ✨`;
+
+                await sock.sendMessage(from, { 
+                    image: { url: "https://i.ibb.co/dJMB66cZ/20250801-234253.jpg" }, 
+                    caption: menuMsg 
+                }, { quoted: mek });
+            }
+
+            // 3. 🎶 SONG DOWNLOADER (.song)
+            if (command === "song") {
+                if (!text) return reply(sock, from, "🐰 *කරුණාකර සිංදුවේ නම ඇතුළත් කරන්න මචං! (උදා: .song mal mitak)*", mek);
+                
+                await reply(sock, from, "📥 *Xiao Wu සිංදුව හොයනවා... පොඩ්ඩක් ඉන්න...* 🎵", mek);
+                
+                try {
+                    // Ryuu YTAudio Downloader API
+                    const searchUrl = `https://api.ryuu.me/api/download/ytaudio?text=${encodeURIComponent(text)}&apiKey=${config.RYUU_API_KEY}`;
+                    const res = await axios.get(searchUrl);
+                    const downloadUrl = res.data.result;
+
+                    if (!downloadUrl) return reply(sock, from, "❌ *සිංදුව සොයාගත නොහැකි විය.*", mek);
+
+                    // ඕඩියෝ එක වට්ස්ඇප් එකට යවනවා
+                    await sock.sendMessage(from, { 
+                        audio: { url: downloadUrl }, 
+                        mimetype: 'audio/mp4', 
+                        ptt: false 
+                    }, { quoted: mek });
+
+                } catch (e) {
+                    console.error(e);
+                    reply(sock, from, "❌ *සිංදුව ඩවුන්ලෝඩ් කිරීමේදී දෝෂයක් ඇති විය.*", mek);
+                }
+            }
+
+            // 4. 📹 VIDEO DOWNLOADER (.video)
+            if (command === "video") {
+                if (!text) return reply(sock, from, "🐰 *කරුණාකර වීඩියෝවේ නම ඇතුළත් කරන්න මචං!*", mek);
+                
+                await reply(sock, from, "📥 *Xiao Wu වීඩියෝව හොයනවා... පොඩ්ඩක් ඉන්න...* 📹", mek);
+                
+                try {
+                    // Ryuu YTVideo Downloader API
+                    const searchUrl = `https://api.ryuu.me/api/download/ytvideo?text=${encodeURIComponent(text)}&apiKey=${config.RYUU_API_KEY}`;
+                    const res = await axios.get(searchUrl);
+                    const downloadUrl = res.data.result;
+
+                    if (!downloadUrl) return reply(sock, from, "❌ *වීඩියෝව සොයාගත නොහැකි විය.*", mek);
+
+                    await sock.sendMessage(from, { 
+                        video: { url: downloadUrl }, 
+                        caption: "🐰 *මෙන්න ඔයාගේ වීඩියෝව!* 🌸" 
+                    }, { quoted: mek });
+
+                } catch (e) {
+                    console.error(e);
+                    reply(sock, from, "❌ *වීඩියෝව ඩවුන්ලෝඩ් කිරීමේදී දෝෂයක් ඇති විය.*", mek);
+                }
+            }
+
+            // 5. 🎨 AI IMAGE GENERATOR (.imagine)
+            if (command === "imagine") {
+                if (!text) return reply(sock, from, "🐰 *කරුණාකර සාදාගත යුතු පින්තූරයේ විස්තරයක් දෙන්න! (උදා: .imagine cute rabbit)*", mek);
+                
+                await reply(sock, from, "🎨 *Xiao Wu පින්තූරය අඳිනවා... පොඩ්ඩක් ඉන්න...* 🐇", mek);
+                
+                try {
+                    // Ryuu Text-to-Image API
+                    const imgUrl = `https://api.ryuu.me/api/ai/imagine?text=${encodeURIComponent(text)}&apiKey=${config.RYUU_API_KEY}`;
+                    
+                    await sock.sendMessage(from, { 
+                        image: { url: imgUrl }, 
+                        caption: `🐰 *Generated by Xiao Wu AI* 🌸\n\n✨ *Prompt:* ${text}` 
+                    }, { quoted: mek });
+
+                } catch (e) {
+                    console.error(e);
+                    reply(sock, from, "❌ *පින්තූරය සෑදීමේදී දෝෂයක් ඇති විය.*", mek);
+                }
+            }
 
         } catch (error) {
-            console.error("❌ Gemini API Error:", error.message);
+            console.error("❌ Main Process Error:", error.message);
         }
     });
 
@@ -57,7 +155,7 @@ async function connectToWhatsApp() {
     sock.ev.on("connection.update", async (update) => {
         const { connection, lastDisconnect } = update;
         if (connection === "open") {
-            console.log("\n🌸 PURE XIAO WU CONNECTED SUCCESSFULLY!");
+            console.log("\n🌸 PURE XIAO WU CONECTED WITH MULTI-COMMANDS!");
         }
         if (connection === "close") {
             const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
@@ -68,23 +166,11 @@ async function connectToWhatsApp() {
             }
         }
     });
+}
 
-    // 🔑 Gifted Pairing Code Generator (Super Fast & Stable)
-    if (!sock.authState.creds.registered) {
-        console.log(`\n🐰 Xiao Wu සර්වර් එකට සම්බන්ධ වෙනවා... නම්බර් එක: ${config.MY_NUMBER}`);
-        await delay(5000); // ⏳ තත්පර 5ක සරල ඩිලේ එකක්
-        
-        try {
-            let clearedNumber = config.MY_NUMBER.replace(/[^0-9]/g, ""); // නම්බර් එකේ වෙනත් ලකුණු තියෙනවා නම් අයින් කරනවා
-            const code = await sock.requestPairingCode(clearedNumber);
-            console.log("\n==============================================");
-            console.log(`💖 XIAO WU PAIRING CODE: ${code}`);
-            console.log("==============================================");
-            console.log("👉 මේ කෝඩ් එක ඉක්මනින්ම කොපි කරගෙන, වට්ස්ඇප් එකට ලින්ක් කරන්න!\n");
-        } catch (err) {
-            console.log("\n❌ කෝඩ් එක ගන්න බැරි වුණා. ආයෙත් 'npm start' දීලා බලන්න.", err.message);
-        }
-    }
+// 헬පර් function එකක් රිප්ලයි ලේසි කරන්න
+async function reply(sock, from, text, mek) {
+    return await sock.sendMessage(from, { text: text }, { quoted: mek });
 }
 
 connectToWhatsApp();
