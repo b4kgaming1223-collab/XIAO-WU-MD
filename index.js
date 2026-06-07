@@ -1,15 +1,11 @@
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, delay } = require("gifted-baileys");
 const P = require("pino");
 const axios = require("axios");
-const ytSearch = require("ytsearch-venom"); 
-const mfire = require("mfiredlcore-yt");    
+const ytdl = require("@distube/ytdl-core");
+const { youtube } = require("@bochilteam/scraper");
 const config = require("./config"); 
 
 async function connectToWhatsApp() {
-    if (!config.RYUU_API_KEY || config.RYUU_API_KEY === "") {
-        console.error("\n❌ ERROR: කරුණාකර config.js එකේ RYUU_API_KEY එක දාන්න මචං!");
-        process.exit(1);
-    }
     if (config.MY_NUMBER === "947XXXXXXXX" || !config.MY_NUMBER) {
         console.error("\n❌ ERROR: කරුණාකර config.js එකේ MY_NUMBER එකට ඔයාගේ නම්බර් එක දාන්න!");
         process.exit(1);
@@ -61,26 +57,26 @@ async function connectToWhatsApp() {
 
             const botImageUrl = config.BOT_IMAGE || "https://raw.githubusercontent.com/sadiyamin/Alexa/master/LaraMedia/image/lara.jpg";
 
+            // 1. 🌸 ALIVE COMMAND
             if (command === "alive") {
                 const aliveMsg = `🐰 *XIAO WU WHATSAPP BOT* 🌸\n\n` +
                                  `*Hello San-ge! I'm Alive and Running Smoothly...* 💞\n\n` +
-                                 `🤖 *Version:* 1.2.0 (Dual-Downloader)\n` +
+                                 `🤖 *Version:* 1.5.0 (No-API Stable)\n` +
                                  `⚙️ *Platform:* GitHub Codespaces\n` +
-                                 `💎 *API Status:* Ryuu + Backup Method Connected\n\n` +
+                                 `💎 *System Status:* Built-in Engine Connected\n\n` +
                                  `*Use .menu to see my commands!* ⚔️`;
                 
                 await sock.sendMessage(from, { image: { url: botImageUrl }, caption: aliveMsg }, { quoted: mek });
             }
 
+            // 2. 📜 MENU COMMAND
             if (command === "menu") {
                 const menuMsg = `🐰 *XIAO WU BOT MAIN MENU* 🌸\n\n` +
                                  `⚔️ *Owner:* Liyo\n` +
                                  `🌸 *Prefix:* [ . ]\n\n` +
                                  `*🎵 DOWNLOAD COMMANDS:*\n` +
-                                 `🛸 \`.song <song name>\` - Download MP3 Songs (Auto Backup)\n` +
-                                 `🛸 \`.video <video name>\` - Download YouTube Videos (Auto Backup)\n\n` +
-                                 `*🎨 AI & IMAGE COMMANDS:*\n` +
-                                 `🛸 \`.imagine <prompt>\` - AI Image Generator\n\n` +
+                                 `🛸 \`.song <song name>\` - Download MP3 Songs\n` +
+                                 `🛸 \`.video <video name>\` - Download YouTube Videos\n\n` +
                                  `*ℹ️ INFO COMMANDS:*\n` +
                                  `🛸 \`.alive\` - Check Bot Status\n\n` +
                                  `✨ *Pure Soul Land Xiao Wu System* ✨`;
@@ -88,65 +84,52 @@ async function connectToWhatsApp() {
                 await sock.sendMessage(from, { image: { url: botImageUrl }, caption: menuMsg }, { quoted: mek });
             }
 
+            // 3. 🎶 SONG DOWNLOADER (Built-In Engine)
             if (command === "song") {
                 if (!text) return reply(sock, from, "🐰 *කරුණාකර සිංදුවේ නම දෙන්න මචං!*", mek);
                 await reply(sock, from, "📥 *Xiao Wu සිංදුව හොයනවා... පොඩ්ඩක් ඉන්න...* 🎵", mek);
                 
                 try {
-                    const searchUrl = `https://api.ryuu.me/api/download/ytaudio?text=${encodeURIComponent(text)}&apiKey=${config.RYUU_API_KEY}`;
-                    const res = await axios.get(searchUrl);
-                    const downloadUrl = res.data.result;
+                    const search = await youtube.search(text);
+                    if (!search || search.length === 0) return reply(sock, from, "❌ *සිංදුව සොයාගත නොහැකි විය!*", mek);
+                    
+                    const videoUrl = search[0].url;
+                    const stream = ytdl(videoUrl, { filter: 'audioonly', quality: 'highestaudio' });
+                    
+                    // Direct stream URL එකක් සෑදීම හෝ බාගත කිරීම
+                    const info = await ytdl.getInfo(videoUrl);
+                    const format = ytdl.chooseFormat(info.formats, { quality: '140' }); // m4a audio format
 
-                    if (downloadUrl && downloadUrl.startsWith("http")) {
-                        return await sock.sendMessage(from, { audio: { url: downloadUrl }, mimetype: 'audio/mp4', ptt: false }, { quoted: mek });
+                    if (format && format.url) {
+                        await sock.sendMessage(from, { audio: { url: format.url }, mimetype: 'audio/mp4', ptt: false }, { quoted: mek });
+                    } else {
+                        reply(sock, from, "❌ *සිංදුව බාගැනීමට නොහැකි විය. පසුව උත්සාහ කරන්න.*", mek);
                     }
-                    throw new Error("Ryuu Error");
                 } catch (e) {
-                    try {
-                        const searchResult = await ytSearch(text);
-                        const videoUrl = searchResult.videos[0].url;
-                        const dlData = await mfire.getAudio(videoUrl);
-                        await sock.sendMessage(from, { audio: { url: dlData.downloadUrl }, mimetype: 'audio/mp4', ptt: false }, { quoted: mek });
-                    } catch (backupError) {
-                        reply(sock, from, "❌ *සිංදුව බාගැනීමට නොහැකි විය.*", mek);
-                    }
+                    reply(sock, from, "❌ *සිංදුව සෙවීමේදී දෝෂයක් ඇති විය.*", mek);
                 }
             }
 
+            // 4. 📹 VIDEO DOWNLOADER (Built-In Engine)
             if (command === "video") {
                 if (!text) return reply(sock, from, "🐰 *කරුණාකර වීඩියෝවේ නම දෙන්න!*", mek);
                 await reply(sock, from, "📥 *Xiao Wu වීඩියෝව හොයනවා... පොඩ්ඩක් ඉන්න...* 📹", mek);
                 
                 try {
-                    const searchUrl = `https://api.ryuu.me/api/download/ytvideo?text=${encodeURIComponent(text)}&apiKey=${config.RYUU_API_KEY}`;
-                    const res = await axios.get(searchUrl);
-                    const downloadUrl = res.data.result;
+                    const search = await youtube.search(text);
+                    if (!search || search.length === 0) return reply(sock, from, "❌ *වීඩියෝව සොයාගත නොහැකි විය!*", mek);
+                    
+                    const videoUrl = search[0].url;
+                    const info = await ytdl.getInfo(videoUrl);
+                    const format = ytdl.chooseFormat(info.formats, { quality: '18' }); // 360p mp4 video format
 
-                    if (downloadUrl && downloadUrl.startsWith("http")) {
-                        return await sock.sendMessage(from, { video: { url: downloadUrl }, caption: "🐰 *මෙන්න ඔයාගේ වීඩියෝව!* 🌸" }, { quoted: mek });
-                    }
-                    throw new Error("Ryuu Error");
-                } catch (e) {
-                    try {
-                        const searchResult = await ytSearch(text);
-                        const videoUrl = searchResult.videos[0].url;
-                        const dlData = await mfire.getVideo(videoUrl);
-                        await sock.sendMessage(from, { video: { url: dlData.downloadUrl }, caption: "🐰 *මෙන්න ඔයාගේ වීඩියෝව! (Backup)* 🌸" }, { quoted: mek });
-                    } catch (backupError) {
+                    if (format && format.url) {
+                        await sock.sendMessage(from, { video: { url: format.url }, caption: `🐰 *මෙන්න ඔයාගේ වීඩියෝව!* 🌸\n\n🎬 *Title:* ${search[0].title}` }, { quoted: mek });
+                    } else {
                         reply(sock, from, "❌ *වීඩියෝව බාගැනීමට නොහැකි විය.*", mek);
                     }
-                }
-            }
-
-            if (command === "imagine") {
-                if (!text) return reply(sock, from, "🐰 *කරුණාකර විස්තරයක් දෙන්න!*", mek);
-                await reply(sock, from, "🎨 *Xiao Wu පින්තූරය අඳිනවා... පොඩ්ඩක් ඉන්න...* 🐇", mek);
-                
-                try {
-                    const imgUrl = `https://api.ryuu.me/api/ai/imagine?text=${encodeURIComponent(text)}&apiKey=${config.RYUU_API_KEY}`;
-                    await sock.sendMessage(from, { image: { url: imgUrl }, caption: `🐰 *Generated by Xiao Wu AI* 🌸\n\n✨ *Prompt:* ${text}` }, { quoted: mek });
                 } catch (e) {
-                    reply(sock, from, "❌ *පින්තූරය සෑදීමේදී දෝෂයක් ඇති විය.*", mek);
+                    reply(sock, from, "❌ *වීඩියෝව සෙවීමේදී දෝෂයක් ඇති විය.*", mek);
                 }
             }
 
@@ -158,7 +141,7 @@ async function connectToWhatsApp() {
     sock.ev.on("connection.update", async (update) => {
         const { connection, lastDisconnect } = update;
         if (connection === "open") {
-            console.log("\n🌸 PURE XIAO WU DUAL-BOT IS ONLINE!");
+            console.log("\n🌸 PURE XIAO WU NO-API BOT IS ONLINE!");
         }
         if (connection === "close") {
             const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
