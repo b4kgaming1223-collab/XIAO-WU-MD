@@ -1,8 +1,8 @@
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, delay } = require("gifted-baileys");
 const P = require("pino");
 const axios = require("axios");
-const ytSearch = require("ytsearch-venom"); // 🔍 Backup සර්ච් එක සඳහා
-const mfire = require("mfiredlcore-yt");    // 📥 Backup ඩවුන්ලෝඩර් එක සඳහා
+const ytSearch = require("ytsearch-venom"); 
+const mfire = require("mfiredlcore-yt");    
 const config = require("./config"); 
 
 async function connectToWhatsApp() {
@@ -26,7 +26,6 @@ async function connectToWhatsApp() {
 
     sock.ev.on("creds.update", saveCreds);
 
-    // 🔑 Pairing Code Generator
     if (!sock.authState.creds.registered) {
         console.log(`\n🐰 Xiao Wu සර්වර් එකට සම්බන්ධ වෙනවා... නම්බර් එක: ${config.MY_NUMBER}`);
         await delay(5000); 
@@ -62,7 +61,6 @@ async function connectToWhatsApp() {
 
             const botImageUrl = config.BOT_IMAGE || "https://raw.githubusercontent.com/sadiyamin/Alexa/master/LaraMedia/image/lara.jpg";
 
-            // 1. 🌸 ALIVE COMMAND (.alive)
             if (command === "alive") {
                 const aliveMsg = `🐰 *XIAO WU WHATSAPP BOT* 🌸\n\n` +
                                  `*Hello San-ge! I'm Alive and Running Smoothly...* 💞\n\n` +
@@ -74,7 +72,6 @@ async function connectToWhatsApp() {
                 await sock.sendMessage(from, { image: { url: botImageUrl }, caption: aliveMsg }, { quoted: mek });
             }
 
-            // 2. 📜 MENU COMMAND (.menu)
             if (command === "menu") {
                 const menuMsg = `🐰 *XIAO WU BOT MAIN MENU* 🌸\n\n` +
                                  `⚔️ *Owner:* Liyo\n` +
@@ -91,13 +88,11 @@ async function connectToWhatsApp() {
                 await sock.sendMessage(from, { image: { url: botImageUrl }, caption: menuMsg }, { quoted: mek });
             }
 
-            // 3. 🎶 SONG DOWNLOADER (.song)
             if (command === "song") {
                 if (!text) return reply(sock, from, "🐰 *කරුණාකර සිංදුවේ නම දෙන්න මචං!*", mek);
                 await reply(sock, from, "📥 *Xiao Wu සිංදුව හොයනවා... පොඩ්ඩක් ඉන්න...* 🎵", mek);
                 
                 try {
-                    // ක්‍රමය 1: RyuuAPI
                     const searchUrl = `https://api.ryuu.me/api/download/ytaudio?text=${encodeURIComponent(text)}&apiKey=${config.RYUU_API_KEY}`;
                     const res = await axios.get(searchUrl);
                     const downloadUrl = res.data.result;
@@ -107,7 +102,6 @@ async function connectToWhatsApp() {
                     }
                     throw new Error("Ryuu Error");
                 } catch (e) {
-                    // ක්‍රමය 2: Backup Downloader
                     try {
                         const searchResult = await ytSearch(text);
                         const videoUrl = searchResult.videos[0].url;
@@ -119,13 +113,11 @@ async function connectToWhatsApp() {
                 }
             }
 
-            // 4. 📹 VIDEO DOWNLOADER (.video)
             if (command === "video") {
                 if (!text) return reply(sock, from, "🐰 *කරුණාකර වීඩියෝවේ නම දෙන්න!*", mek);
                 await reply(sock, from, "📥 *Xiao Wu වීඩියෝව හොයනවා... පොඩ්ඩක් ඉන්න...* 📹", mek);
                 
                 try {
-                    // ක්‍රමය 1: RyuuAPI
                     const searchUrl = `https://api.ryuu.me/api/download/ytvideo?text=${encodeURIComponent(text)}&apiKey=${config.RYUU_API_KEY}`;
                     const res = await axios.get(searchUrl);
                     const downloadUrl = res.data.result;
@@ -135,7 +127,6 @@ async function connectToWhatsApp() {
                     }
                     throw new Error("Ryuu Error");
                 } catch (e) {
-                    // ක්‍රමය 2: Backup Video Downloader
                     try {
                         const searchResult = await ytSearch(text);
                         const videoUrl = searchResult.videos[0].url;
@@ -147,7 +138,6 @@ async function connectToWhatsApp() {
                 }
             }
 
-            // 5. 🎨 AI IMAGE GENERATOR (.imagine)
             if (command === "imagine") {
                 if (!text) return reply(sock, from, "🐰 *කරුණාකර විස්තරයක් දෙන්න!*", mek);
                 await reply(sock, from, "🎨 *Xiao Wu පින්තූරය අඳිනවා... පොඩ්ඩක් ඉන්න...* 🐇", mek);
