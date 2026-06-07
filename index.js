@@ -17,13 +17,12 @@ async function startBot() {
         auth: state,
         logger: P({ level: "silent" }),
         printQRInTerminal: false,
-        // 🛠️ FIX FROM LARA: වට්ස්ඇප් සර්වර් එකෙන් බ්ලොක් නොවී කෙලින්ම කනෙක්ට් වෙන බ්‍රව්සර් ලයිනර් එක
         browser: ["Ubuntu", "Chrome", "20.0.0"]
     });
 
     sock.ev.on("creds.update", saveCreds);
 
-    // 📱 Config එකේ නම්බර් එකට ඔටෝම Pairing Code එක දෙන සුපිරි සිස්ටම් එක
+    // 📱 Config එකෙන් නම්බර් එක අරන් ඔටෝම Pairing Code එක දෙන සිස්ටම් එක
     if (!sock.authState.creds.registered) {
         console.log(`\n🐰 Xiao Wu සර්වර් එකට සම්බන්ධ වෙනවා... නම්බර් එක: ${config.MY_NUMBER}`);
         await delay(6000); 
@@ -72,13 +71,8 @@ async function startBot() {
             const args = body.trim().split(/ +/).slice(1);
             const text = args.join(" ");
 
-            // 👑 ඔයා ඉල්ලපු විදිහටම මැසේජ් එක එවපු කෙනාගේ වට්ස්ඇප් නම ඔටෝම ගන්නා කොටස
             const senderName = mek.pushName || "Soul Land Warrior";
             const botImageUrl = config.BOT_IMAGE || "https://raw.githubusercontent.com/sadiyamin/Alexa/master/LaraMedia/image/lara.jpg";
-
-            // ========================================================
-            // 🐰 COMMANDS SYSTEM (SOUL LAND STYLE)
-            // ========================================================
 
             // 📜 SOUL LAND THEME BOX STYLE MENU
             if (command === "menu") {
@@ -96,19 +90,19 @@ async function startBot() {
                                     `🛸 \`.alive\` ── බොට් ඔන්ලයින්ද බැලීමට 🐰\n` +
                                     `🛸 \`.song\` <නම> ── උසස් තත්වයේ MP3 බාගැනීමට 📥\n` +
                                     `🛸 \`.video\` <නම> ── සුපැහැදිලි MP4 බාගැනීමට 📹\n\n` +
-                                    `*✨ "Even if I sacrifice my soul, I will protect you!" - Xiao Wu v5.5.0 ✨*`;
+                                    `*✨ "Even if I sacrifice my soul, I will protect you!" - Xiao Wu v5.6.0 ✨*`;
 
-                // 🖼️ පින්තූරෙට පල්ලෙහායින් Caption එක විදිහට ලස්සනට යැවීම
                 await sock.sendMessage(from, { image: { url: botImageUrl }, caption: premiumMenu }, { quoted: mek });
                 
-                // 🎵 මෙනු එක ගියපු ගමන් ඔටෝම වොයිස් නෝට් එකක් විදිහට ඕඩියෝ එක යැවීම
                 if (config.MENU_AUDIO) {
-                    return sock.sendMessage(from, { audio: { url: config.MENU_AUDIO }, mimetype: 'audio/mp4', ptt: true }, { quoted: mek });
+                    try {
+                        await sock.sendMessage(from, { audio: { url: config.MENU_AUDIO }, mimetype: 'audio/mp4', ptt: true }, { quoted: mek });
+                    } catch (e) { console.log("Audio Send Error"); }
                 }
                 return;
             }
 
-            // 🐰 SOUL LAND THEME ALIVE (Hii + Sender name එකත් එක්කම)
+            // 🐰 SOUL LAND THEME ALIVE
             if (command === "alive") {
                 const aliveMsg = `╭───━━━━🌟━━━━───╮\n` +
                                  `  🐰 *XIAO WU STATUS* 🐰\n` +
@@ -116,43 +110,38 @@ async function startBot() {
                                  `*Hii ${senderName}! මම සාර්ථකව ඔන්ලයින් ඉන්නේ...* 💞\n\n` +
                                  `┌────────────────────────~\n` +
                                  `│ 🤖 *Bot Name:* Xiao Wu MD\n` +
-                                 `│ ⚙️ *Version:* 5.5.0 (Premium Core)\n` +
+                                 `│ ⚙️ *Version:* 5.6.0 (Premium Core)\n` +
                                  `│ 💻 *Engine:* Fixed Lara-Baileys Core\n` +
                                  `│ 💎 *Mode:* Pure Soul Ring Active\n` +
                                  `└────────────────────────~\n\n` +
                                  `_\"San-ge, Xiao Wu is always here with you to protect!\"_ ⚔️`;
 
-                // 🖼️ පින්තූරෙට පල්ලෙහායින් Caption එක විදිහට අලයිව් එක යැවීම
                 await sock.sendMessage(from, { image: { url: botImageUrl }, caption: aliveMsg }, { quoted: mek });
                 
-                // 🎵 අලයිව් එක ගියපු ගමන් ඔටෝම වොයිස් නෝට් එකක් විදිහට ඕඩියෝ එක යැවීම
                 if (config.ALIVE_AUDIO) {
-                    return sock.sendMessage(from, { audio: { url: config.ALIVE_AUDIO }, mimetype: 'audio/mp4', ptt: true }, { quoted: mek });
+                    try {
+                        await sock.sendMessage(from, { audio: { url: config.ALIVE_AUDIO }, mimetype: 'audio/mp4', ptt: true }, { quoted: mek });
+                    } catch (e) { console.log("Audio Send Error"); }
                 }
                 return;
             }
 
             // 🎶 FIXED SONG DOWNLOADER
             if (command === "song") {
-                if (!text) return sock.sendMessage(from, { text: "🐰 *කරුණාකර සිංදුවේ නම දෙන්න මචං!*" }, { quoted: mek });
+                if (!text) return sock.sendMessage(from, { text: "🐰 *කරුණාකරසිංදුවේ නම දෙන්න මචං!*" }, { quoted: mek });
                 await sock.sendMessage(from, { text: "📥 *Xiao Wu සිංදුව හොයනවා... පොඩ්ඩක් ඉන්න...* 🎵" }, { quoted: mek });
                 
                 try {
                     const searchRes = await axios.get(`https://tools.bright.io.vn/api/youtube/search?query=${encodeURIComponent(text)}`);
                     const videoUrl = searchRes.data.results[0].url;
-                    
-                    if (!videoUrl) return sock.sendMessage(from, { text: "❌ *සිංදුව සොයාගත නොහැකි විය!*" }, { quoted: mek });
-                    
                     const info = await ytdl.getInfo(videoUrl);
                     const format = ytdl.chooseFormat(info.formats, { quality: '140' }); 
 
                     if (format && format.url) {
                         return await sock.sendMessage(from, { audio: { url: format.url }, mimetype: 'audio/mp4', ptt: false }, { quoted: mek });
-                    } else {
-                        return sock.sendMessage(from, { text: "❌ *සිංදුව බාගැනීමට නොහැකි විය.*" }, { quoted: mek });
                     }
                 } catch (e) {
-                    return sock.sendMessage(from, { text: "❌ *සිංදුව සෙවීමේදී දෝෂයක් ඇති විය.*" }, { quoted: mek });
+                    return sock.sendMessage(from, { text: "❌ *සිංදුව සෙවීමේදී හෝ බාගැනීමේදී දෝෂයක් ඇති විය.*" }, { quoted: mek });
                 }
             }
 
@@ -164,19 +153,14 @@ async function startBot() {
                 try {
                     const searchRes = await axios.get(`https://tools.bright.io.vn/api/youtube/search?query=${encodeURIComponent(text)}`);
                     const videoUrl = searchRes.data.results[0].url;
-                    
-                    if (!videoUrl) return sock.sendMessage(from, { text: "❌ *වීඩියෝව සොයාගත නොහැකි විය!*" }, { quoted: mek });
-                    
                     const info = await ytdl.getInfo(videoUrl);
                     const format = ytdl.chooseFormat(info.formats, { quality: '18' }); 
 
                     if (format && format.url) {
                         return await sock.sendMessage(from, { video: { url: format.url }, caption: `🐰 *මෙන්න ඔයාගේ වීඩියෝව!* 🌸\n\n🎬 *Title:* ${searchRes.data.results[0].title}` }, { quoted: mek });
-                    } else {
-                        return sock.sendMessage(from, { text: "❌ *වීඩියෝව බාගැනීමට නොහැකි විය.*" }, { quoted: mek });
                     }
                 } catch (e) {
-                    return sock.sendMessage(from, { text: "❌ *වීඩියෝව සෙවීමේදී දෝෂයක් ඇති විය.*" }, { quoted: mek });
+                    return sock.sendMessage(from, { text: "❌ *වීඩියෝව සෙවීමේදී හෝ බාගැනීමේදී දෝෂයක් ඇති විය.*" }, { quoted: mek });
                 }
             }
 
