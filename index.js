@@ -1,4 +1,4 @@
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, delay } = require("@whiskeysockets/baileys");
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, delay } = require("gifted-baileys");
 const P = require("pino");
 const axios = require("axios");
 const config = require("./config"); 
@@ -13,19 +13,19 @@ async function connectToWhatsApp() {
         process.exit(1);
     }
 
+    // 🔒 ඔටෝම සෙෂන් එක පිරිසිදුව හදාගන්නවා
     const { state, saveCreds } = await useMultiFileAuthState("./xiao_wu_session");
 
     const sock = makeWASocket({
         auth: state,
         logger: P({ level: "silent" }),
         printQRInTerminal: false,
-        connectTimeoutMs: 60000, // ⏳ සර්වර් එක කනෙක්ට් වෙනකන් විනාඩියක් බලන් ඉන්න ඉඩ දුන්නා
-        defaultQueryTimeoutMs: 0
+        browser: ["Ubuntu", "Chrome", "20.0.04"] // 🌐 සර්වර් එකට අපි Chrome browser එකක් වගේ පේන්න සැලැස්සුවා
     });
 
     sock.ev.on("creds.update", saveCreds);
 
-    // 💬 මැසේජ් ලැබෙන කොටස
+    // 💬 වට්ස්ඇප් මැසේජ් ලැබෙන කොටස
     sock.ev.on("messages.upsert", async (chatUpdate) => {
         try {
             const mek = chatUpdate.messages[0];
@@ -63,26 +63,26 @@ async function connectToWhatsApp() {
             const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
             console.log("\n⚠️ Connection closed, reconnecting...");
             if (shouldReconnect) {
-                await delay(5000); // රීකනෙක්ට් වෙන්න කලින් තත්පර 5ක් ඉන්නවා
+                await delay(5000); 
                 connectToWhatsApp();
             }
         }
     });
 
-    // 🔑 Auto Pairing Code Generator
+    // 🔑 Gifted Pairing Code Generator (Super Fast & Stable)
     if (!sock.authState.creds.registered) {
         console.log(`\n🐰 Xiao Wu සර්වර් එකට සම්බන්ධ වෙනවා... නම්බර් එක: ${config.MY_NUMBER}`);
-        console.log("⏳ සර්වර් එක ස්ටේබල් වෙනකන් තත්පර 10ක් ඉන්නවා... පොඩ්ඩක් ඉන්න මචං...");
-        await delay(10000); // ⏳ ඩිලේ එක තත්පර 10ක් කලා ස්ටේබල් වෙන්න
+        await delay(5000); // ⏳ තත්පර 5ක සරල ඩිලේ එකක්
         
         try {
-            const code = await sock.requestPairingCode(config.MY_NUMBER.trim());
+            let clearedNumber = config.MY_NUMBER.replace(/[^0-9]/g, ""); // නම්බර් එකේ වෙනත් ලකුණු තියෙනවා නම් අයින් කරනවා
+            const code = await sock.requestPairingCode(clearedNumber);
             console.log("\n==============================================");
             console.log(`💖 XIAO WU PAIRING CODE: ${code}`);
             console.log("==============================================");
             console.log("👉 මේ කෝඩ් එක ඉක්මනින්ම කොපි කරගෙන, වට්ස්ඇප් එකට ලින්ක් කරන්න!\n");
         } catch (err) {
-            console.log("\n❌ කෝඩ් එක ගන්න බැරි වුණා. ආයෙත් 'npm start' දීලා බලන්න.");
+            console.log("\n❌ කෝඩ් එක ගන්න බැරි වුණා. ආයෙත් 'npm start' දීලා බලන්න.", err.message);
         }
     }
 }
