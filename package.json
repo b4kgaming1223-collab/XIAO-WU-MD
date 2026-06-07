@@ -1,6 +1,6 @@
 {
   "name": "xiao-wu-md",
-  "version": "5.6.0",
+  "version": "5.9.5",
   "description": "Premium Soul Land Xiao Wu Fixed WhatsApp Bot",
   "main": "index.js",
   "scripts": {
@@ -9,7 +9,7 @@
   "dependencies": {
     "gifted-baileys": "^2.0.6",
     "pino": "^9.0.0",
-    "axios": "^1.6.0",
+    "axios": "^1.6.8",
     "@distube/ytdl-core": "^4.16.12"
   }
 }
