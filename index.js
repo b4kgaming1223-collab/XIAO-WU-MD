@@ -10,7 +10,6 @@ async function startBot() {
         process.exit(1);
     }
 
-    // ස්ටේබල් Xiao Wu සෙෂන් ෆෝල්ඩර් එක
     const { state, saveCreds } = await useMultiFileAuthState("./xiao_wu_session");
 
     const sock = makeWASocket({
@@ -22,7 +21,6 @@ async function startBot() {
 
     sock.ev.on("creds.update", saveCreds);
 
-    // 📱 ඔටෝ පෙයාරින් කෝඩ් සිස්ටම් එක
     if (!sock.authState.creds.registered) {
         console.log(`\n🐰 Xiao Wu සර්වර් එකට සම්බන්ධ වෙනවා... නම්බර් එක: ${config.MY_NUMBER}`);
         await delay(6000); 
@@ -32,9 +30,8 @@ async function startBot() {
             console.log("\n==============================================");
             console.log(`🔑 YOUR SOUL BIND CODE: ${code}`);
             console.log("==============================================");
-            console.log("👉 මේ කෝඩ් එක ඉක්මනින්ම කොපි කරගෙන වට්ස්ඇප් එකට ලින්ක් කරන්න මචං!\n");
         } catch (err) {
-            console.log("\n❌ කෝඩ් එක ගන්න බැරි වුණා. ටික වෙලාවකින් 'npm start' දීලා බලන්න.");
+            console.log("\n❌ කෝඩ් එක ගන්න බැරි වුණා.");
         }
     }
 
@@ -55,9 +52,14 @@ async function startBot() {
     sock.ev.on("messages.upsert", async (chatUpdate) => {
         try {
             const mek = chatUpdate.messages[0];
-            if (!mek.message) return; // 🛠️ FIX: ඔයාගේ නම්බර් එකෙන් එවන ඒවා වැඩ කරන්න 'fromMe' චෙක් එක අයින් කළා මචං!
+            if (!mek.message) return; 
 
             const from = mek.key.remoteJid;
+            
+            // 🛠️ CRITICAL FIX: බොට් තමන්ගේම මැසේජ් වලට රිප්ලයි කරලා ක්‍රෑෂ් වෙන එක (Loop) වැළැක්වීම
+            const botNumber = config.MY_NUMBER.replace(/[^0-9]/g, "") + "@s.whatsapp.net";
+            if (mek.key.fromMe && from === botNumber) return; 
+
             const type = Object.keys(mek.message)[0];
             const body = type === "conversation" ? mek.message.conversation : 
                          type === "extendedTextMessage" ? mek.message.extendedTextMessage.text : "";
@@ -90,19 +92,24 @@ async function startBot() {
                                     `🛸 \`.alive\` ── බොට් ඔන්ලයින්ද බැලීමට 🐰\n` +
                                     `🛸 \`.song\` <නම> ── MP3 බාගැනීමට 📥\n` +
                                     `🛸 \`.video\` <නම> ── MP4 බාගැනීමට 📹\n\n` +
-                                    `*✨ "Even if I sacrifice my soul, I will protect you!" - Xiao Wu v5.7.0 ✨*`;
+                                    `*✨ "Even if I sacrifice my soul, I will protect you!" - Xiao Wu v5.7.5 ✨*`;
 
-                // 1. ඉස්සෙල්ලාම පින්තූරය කැප්ෂන් එකත් එක්ක යවනවා
+                // 1. ෆොටෝ එක කැප්ෂන් එකත් එක්ක යැවීම
                 const sentMsg = await sock.sendMessage(from, { image: { url: botImageUrl }, caption: premiumMenu }, { quoted: mek });
                 
-                // 2. තත්පර බාගයකින් ඔටෝම වොයිස් නෝට් එක සෙන්ඩ් වෙනවා
+                // 2. 🛠️ STABLE AUDIO FIX: ක්‍රෑෂ් නොවී ස්ටේබල් වොයිස් නෝට් එකක් විදිහට යැවීම
                 if (config.MENU_AUDIO) {
-                    await delay(500);
-                    return sock.sendMessage(from, { 
-                        audio: { url: config.MENU_AUDIO }, 
-                        mimetype: 'audio/mp4', 
-                        ptt: true 
-                    }, { quoted: sentMsg });
+                    await delay(800);
+                    try {
+                        await sock.sendMessage(from, { 
+                            audio: { url: config.MENU_AUDIO }, 
+                            mimetype: 'audio/mp4', 
+                            ptt: true,
+                            waveform: new Uint8Array([0,10,20,30,40,50,60,70,80,90,100])
+                        }, { quoted: sentMsg });
+                    } catch (audioErr) {
+                        console.log("Menu Audio Send Error:", audioErr.message);
+                    }
                 }
                 return;
             }
@@ -117,23 +124,28 @@ async function startBot() {
                                  `*Hii ${senderName}! මම සාර්ථකව ඔන්ලයින් ඉන්නේ...* 💞\n\n` +
                                  `┌────────────────────────~\n` +
                                  `│ 🤖 *Bot Name:* Xiao Wu MD\n` +
-                                 `│ ⚙️ *Version:* 5.7.0 (Premium Core)\n` +
+                                 `│ ⚙️ *Version:* 5.7.5 (Premium Core)\n` +
                                  `│ 💻 *Engine:* Fixed Lara-Baileys Core\n` +
                                  `│ 💎 *Mode:* Pure Soul Ring Active\n` +
                                  `└────────────────────────~\n\n` +
                                  `_\"San-ge, Xiao Wu is always here with you to protect!\"_ ⚔️`;
 
-                // 1. අලයිව් පින්තූරය සහ කැප්ෂන් එක යැවීම
+                // 1. අලයිව් එක පින්තූරයත් එක්ක යැවීම
                 const sentMsg = await sock.sendMessage(from, { image: { url: botImageUrl }, caption: aliveMsg }, { quoted: mek });
                 
-                // 2. තත්පර බාගයකින් ඔටෝම වොයිස් නෝට් එක සෙන්ඩ් වෙනවා
+                // 2. 🛠️ STABLE AUDIO FIX
                 if (config.ALIVE_AUDIO) {
-                    await delay(500);
-                    return sock.sendMessage(from, { 
-                        audio: { url: config.ALIVE_AUDIO }, 
-                        mimetype: 'audio/mp4', 
-                        ptt: true 
-                    }, { quoted: sentMsg });
+                    await delay(800);
+                    try {
+                        await sock.sendMessage(from, { 
+                            audio: { url: config.ALIVE_AUDIO }, 
+                            mimetype: 'audio/mp4', 
+                            ptt: true,
+                            waveform: new Uint8Array([0,10,20,30,40,50,60,70,80,90,100])
+                        }, { quoted: sentMsg });
+                    } catch (audioErr) {
+                        console.log("Alive Audio Send Error:", audioErr.message);
+                    }
                 }
                 return;
             }
