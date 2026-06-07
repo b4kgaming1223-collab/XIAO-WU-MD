@@ -1,16 +1,13 @@
 {
   "name": "xiao-wu",
-  "version": "1.2.0",
-  "description": "Pure Soul Land Xiao Wu Multi-Device WhatsApp Bot",
+  "version": "1.5.0",
+  "description": "Pure Soul Land Xiao Wu No-API WhatsApp Bot",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
     "@adiwajshing/keyed-db": "^0.2.4",
-    "@blackamda/telegram-image-url": "^1.0.0",
-    "@bochilteam/scraper": "^4.2.4",
-    "@dark-yasiya/yt-dl.js": "^1.0.5",
     "@distube/ytdl-core": "^4.16.12",
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "axios": "^1.6.0",
