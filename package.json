@@ -1,6 +1,6 @@
 {
   "name": "xiao-wu-md",
-  "version": "5.9.5",
+  "version": "6.8.0",
   "description": "Premium Soul Land Xiao Wu Fixed WhatsApp Bot",
   "main": "index.js",
   "scripts": {
@@ -11,6 +11,7 @@
     "pino": "^9.0.0",
     "axios": "^1.6.8",
     "@distube/ytdl-core": "^4.16.12",
-    "ffmpeg-static": "^5.2.0"
+    "fluent-ffmpeg": "^2.1.3",
+    "@ffmpeg-installer/ffmpeg": "^1.1.0"
   }
 }
