@@ -13,5 +13,5 @@ module.exports = {
     MENU_AUDIO: "https://github.com/Sadeesha-lara/Lara-MD-Bot/raw/main/media/menu.mp3",
 
     // 🎵 Alive එක ගැහුවාම ඔටෝම බැක්ග්‍රවුන්ඩ් එකෙන් යන Voice Note (Direct MP3 Link)
-    ALIVE_AUDIO: "https://github.com/Sadeesha-lara/Lara-MD-Bot/raw/main/media/alive.mp3"
+    ALIVE_AUDIO: "https://github.com/b4kgaming1223-collab/XiaoWu-Media/raw/refs/heads/main/lv_0_20260607174637.mp3"
 };
