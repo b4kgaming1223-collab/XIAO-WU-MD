@@ -1,7 +1,7 @@
 {
-  "name": "lara",
-  "version": "4.0.0",
-  "description": "Lara-MD WhatsApp bot created Sadeesha With using Node.js",
+  "name": "xiao-wu",
+  "version": "1.2.0",
+  "description": "Pure Soul Land Xiao Wu Multi-Device WhatsApp Bot",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
