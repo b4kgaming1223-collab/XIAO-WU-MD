@@ -1,7 +1,6 @@
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, delay } = require("gifted-baileys");
 const P = require("pino");
 const axios = require("axios");
-const ffmpegPath = require("ffmpeg-static"); // 🛠️ Codespaces FFmpeg ලින්ක් එක
 const config = require("./config"); 
 
 async function startBot() {
@@ -63,24 +62,25 @@ async function startBot() {
             const senderName = mek.pushName || "Warrior";
             const botImageUrl = config.BOT_IMAGE || "https://raw.githubusercontent.com/sadiyamin/Alexa/master/LaraMedia/image/lara.jpg";
 
-            // 🛠️ CODESPACES 100% WORKING PTT VOICE NOTE SENDER
+            // 🛠️ TRUE BUFFER SENDER (ලෙඩ ඔක්කොම සදහටම ඉවරයි)
             const sendStablePTT = async (targetJid, audioUrl, quotedMessage) => {
                 try {
+                    // ලින්ක් එක කෙලින්ම යවන්නේ නැතුව සර්වර් එක ඇතුළට බයිනරි බෆර් එකක් කරලා ගන්නවා මචං
                     const response = await axios({
                         method: 'get',
                         url: audioUrl,
                         responseType: 'arraybuffer'
                     });
+                    
                     const audioBuffer = Buffer.from(response.data, 'binary');
                     
-                    // 🎧 මෙතනින් කෙලින්ම True WhatsApp Voice Note (PTT) එකක් විදිහට යවනවා මචං
                     await sock.sendMessage(targetJid, { 
                         audio: audioBuffer, 
-                        mimetype: 'audio/mp4', 
-                        ptt: true // මේක true නිසා රියල් වොයිස් එකක් වගේ යනවා
+                        mimetype: 'audio/mp4', // WhatsApp PTT standard codec
+                        ptt: true 
                     }, { quoted: quotedMessage });
                 } catch (err) {
-                    console.log("❌ Audio Playback Error:", err.message);
+                    console.log("❌ Audio Buffer Download Error:", err.message);
                 }
             };
 
@@ -98,16 +98,16 @@ async function startBot() {
                                     `│ 🌸 *Prefix:* [ . ]\n` +
                                     `│ 💎 *Status:* Active\n` +
                                     `└────────────────────────~\n\n` +
-                                    `*✨ ── කමාන්ඩ් ලිස්ට් එක ── ✨*\n\n` +
+                                    `*✨ ── COMMAND LIST ── ✨*\n\n` +
                                     `🛸 \`.menu\` ── ප්‍රධාන මෙනුව බැලීමට 📜\n` +
                                     `🛸 \`.alive\` ── බොට් ක්‍රියාකාරීත්වය සෙවීමට 🐰\n` +
                                     `🛸 \`.song\` <නම> ── Youtube MP3 බාගැනීමට 📥\n` +
                                     `🛸 \`.video\` <නම> ── Youtube MP4 බාගැනීමට 📹\n\n` +
-                                    `*🌸 Xiao Wu MD v6.2.0 - Real PTT Mode Active ✨*`;
+                                    `*🌸 Xiao Wu MD v6.5.0 - True Buffer Edition ✨*`;
 
                 const sentMsg = await sock.sendMessage(from, { image: { url: botImageUrl }, caption: premiumMenu }, { quoted: mek });
                 if (config.MENU_AUDIO) {
-                    await delay(800);
+                    await delay(1000); // පොඩි ඩිලේ එකක් දුන්නා පිළිවෙලට යන්න
                     await sendStablePTT(from, config.MENU_AUDIO, sentMsg);
                 }
                 return;
@@ -123,7 +123,7 @@ async function startBot() {
                                  `*Hello ${senderName}! මම සාර්ථකව ඔන්ලයින් ඉන්නේ...* 🌸\n\n` +
                                  `┌────────────────────────~\n` +
                                  `│ 🤖 *Bot Name:* Xiao Wu MD\n` +
-                                 `│ ⚙️ *Version:* 6.2.0 (Premium Core)\n` +
+                                 `│ ⚙️ *Version:* 6.5.0 (Premium Core)\n` +
                                  `│ 💻 *Engine:* Fixed Gifted Core\n` +
                                  `│ 💎 *Mode:* Pure Soul Ring Active\n` +
                                  `└────────────────────────~\n\n` +
@@ -131,14 +131,14 @@ async function startBot() {
 
                 const sentMsg = await sock.sendMessage(from, { image: { url: botImageUrl }, caption: aliveMsg }, { quoted: mek });
                 if (config.ALIVE_AUDIO) {
-                    await delay(800);
+                    await delay(1000);
                     await sendStablePTT(from, config.ALIVE_AUDIO, sentMsg);
                 }
                 return;
             }
 
             // ========================================================
-            // 🎶 SONG DOWNLOADER (MP3 PLAYER STYLE)
+            // 🎶 SONG DOWNLOADER
             // ========================================================
             if (command === "song") {
                 if (!text) return sock.sendMessage(from, { text: "🐰 *කරුණාකර සිංදුවේ නම හෝ ලින්ක් එක ලබාදෙන්න.*" }, { quoted: mek });
