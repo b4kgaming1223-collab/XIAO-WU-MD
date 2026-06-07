@@ -12,6 +12,9 @@
   "dependencies": {
     "gifted-baileys": "^2.0.6",
     "pino": "^9.0.0",
-    "axios": "^1.7.2"
+    "axios": "^1.7.2",
+    "ytsearch-venom": "^1.0.0",
+    "mfiredlcore-yt": "^1.0.0"
+
   }
 }
